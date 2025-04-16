@@ -1,0 +1,15 @@
+[project]
+name = "WeatherTunes"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "heejin131", email = "journeyjean131@gmail.com"},
+]
+dependencies = ["jupyterlab>=4.4.0", "apache-airflow>=2.10.5", "streamlit>=1.44.1", "requests>=2.32.3", "matplotlib>=3.10.1", "fonttools>=4.57.0"]
+requires-python = "==3.12.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[tool.pdm]
+distribution = false
