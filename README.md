@@ -134,7 +134,7 @@ https://apihub.kma.go.kr/api/typ01/url/kma_sfctm3.php?tm1=<YYYYMMDDHHmm>&tm2=<YY
 
 <br>
     
-# 🪣 Storage
+#  🧺 Storage
 
 > GCS 버킷
 > 
