@@ -112,7 +112,7 @@ https://apihub.kma.go.kr/api/typ01/url/kma_sfctm3.php?tm1=<YYYYMMDDHHmm>&tm2=<YY
     
 - 크기 예상: 하루 당 약 20KB
     
-### 2. Tunbat에서 1번에서 얻은 track_id를 이용하여 곡 정보 크롤링 (with Selenium)
+### 2. Tunebat에서 1번에서 얻은 track_id를 이용하여 곡 정보 크롤링 (with Selenium)
 
 - 링크: https://tunebat.com/Info/a/<TRACK_ID>
 - Spotify audio-featrues API 지원 중단에 따라,
