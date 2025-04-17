@@ -1,5 +1,5 @@
 # WeatherTunes
-A music recommendation system based on weather conditions
+- **날씨에 따른 Spotify 음악 추천 시스템**
 
 # **🎯 분석 목표**
 
@@ -141,31 +141,37 @@ https://apihub.kma.go.kr/api/typ01/url/kma_sfctm3.php?tm1=<YYYYMMDDHHmm>&tm2=<YY
 
 ```bash
 bucket/
-├── raw_data/
-│   ├── weather/
-│   │   └── dt=<YYYYMMDD>/
-│   │       └── 날씨 정보 raw 데이터
-│   └── songs/
-│       └── dt=<YYYYMMDD>/
-│           └── Top 200 곡 raw 데이터
-├── data/
-│   ├── weather/
-│   │   └── dt=<YYYYMMDD>/
-│   │       └── 필요한 날씨 데이터.parquet
-│   ├── songs/
-│   │   └── dt=<YYYYMMDD>/
-│   │       └── 필요한 곡 데이터.parquet
-│   └── audio_features/
-│       └── 전체 곡에 대한 BPM 등의 데이터.parquet
-└── meta/
-    └── dt=<YYYYMMDD>/
-        └── 날씨 + 해당 일자 인기 곡 features 평균.parquet
+├── raw/                         ← 📥 API/크롤링 원본 저장소
+│   ├── weather_raw/
+│   │   └── partition: date
+│   │   └── columns: raw weather data (TM, STN, WD, etc.)
+│   │
+│   └── songs_raw/
+│       └── partition: date
+│       └── columns: raw chart data (title, artist, rank, etc.)
+│
+├── data/                        ← 🧹 전처리 완료된 분석 데이터
+│   ├── weather_daily/           ← 🌦️ 평균기온, 범주화 등 정제 날씨
+│   │   └── partition: date
+│   │   └── columns: temperature, weather
+│   │
+│   ├── songs_top200/            ← 🎵 정제된 Top200 (track_id 포함)
+│   │   └── partition: date
+│   │   └── columns: track_id, artist_names, track_name, days_on_chart, streams
+│   │
+│   └── audio_features/          ← 🎧 Tunebat에서 추출한 곡 특성
+│       └── partition: date
+│       └── columns: track_id, BPM, Danceability, Happiness
+│
+└── meta/                        ← 🧠 날짜, 날씨, 기온별 곡에 대한 정보 (노이즈 x)
+    └── meta_profile/
+        └── partition: date
+        └── subpartition: weather_main, temp_band
+        └── columns: track_id, artist_names, track_name, BPM, Danceability, Happiness
 ```
 
 <br>
 
----
-### 데이터 정제를 위한 작업
 ---
 
 # 🤐 노이즈 
@@ -206,22 +212,97 @@ df_filtered = df[df["days_on_chart"] < 30].reset_index(drop=True) # 30일 이상
 | 비 | 2 |
 | 눈 | 3 |
 
-- 코드 구분 구현 예시
+- 기온 구분 코드
 
-```python
-def classify_weather(row):
-    # 눈 판단: 적설이 있는 경우
-    if float(row['SD_DAY']) > 0 or float(row['SD_HR3']) > 0:
-        return 3
-    
-    # 비 판단: 일강수량 또는 시간강수량이 있는 경우
-    if float(row['RN']) > 0 or float(row['RN_DAY']) > 0:
-        return 2
+| 기온 | 코드 |
+| --- | --- |
+| 0도 이하 | 0 |
+| 0 - 10도 | 1 |
+| 10 - 15도 | 2 |
+| 15 - 20도 | 3 |
+| 20 - 25도 | 4 |
+| 25도 이상 | 5 |
 
-    # 흐림: 전운량이 6 이상
-    if row['CA_TOT'].isdigit() and int(row['CA_TOT']) >= 6:
-        return 1
-    
-    # 나머지는 맑음
-    return 0
-```
+---
+
+# 추천 곡 알고리즘
+
+1. parquet에서 곡 정보 불러오기
+2. 평균값 및 표준편차 계산
+3. z-score 방식으로 유사도 구하기
+4. 가장 유사한 곡 Top 5 추출
+
+---
+
+# 예상 시나리오
+
+비가 오는 날 (weather=2), 기온 5℃ (temp=1) 평균
+
+- BPM: 94.5
+- Energy: 56
+- Danceability: 54.75
+
+맑은 날 (weather=0), 기온 -3℃(temp=0) 평균
+
+- BPM: 111
+- Energy: 69.5
+- Danceability: 75.75
+
+날씨가 비, 기온이 5℃인 경우,
+`meta/weather=2/temp=1/*.parquet` 데이터를 통해 추천 곡 알고리즘을 실행하여 평균치와 비슷한 곡들을 추천
+
+
+# 작업 흐름
+
+- Raw 데이터 수집
+- 전처리/데이터 파티셔닝
+- Airflow
+    - discord 메세지 예시(airflow 마지막 단계) (날씨정보 , 곡 추천)
+        
+        ```markup
+        # 🎧 오늘의 감성 음악 추천 도착!  
+        
+        ### 📆 날짜: 2025-04-15 (화요일)  
+        ### 🌤️ 날씨: 흐림 (평균 기온 18.5°C)
+        
+        ## 오늘 이런 음악 어떠세요?
+        
+        1. 🎵 **"Cloudy Memories"** - by Soft Season  
+           🎚️ 템포: 102 BPM
+           🔗 [Spotify에서 듣기](https://open.spotify.com/track/xxxxxxxx)
+        
+        2. 🎵 **"Raindrop Rhapsody"** - by Dream Keys  
+           🎚️ 템포: 95 BPM
+           🔗 [Spotify에서 듣기](https://open.spotify.com/track/yyyyyyyy)
+        
+        3. 🎵 **"Evening Glow"** - by Hana Lofi  
+           🎚️ 템포: 108 BPM
+           🔗 [Spotify에서 듣기](https://open.spotify.com/track/zzzzzzzz)
+        
+        ### 💬 내일도 당신의 하루에 맞는 음악을 준비할게요!
+        
+        ```
+        
+- Streamlit 시각화
+
+  ## DAG 설계
+
+### raw_weather
+
+- start >> fetch_today_weather  >> end
+
+### raw_songs
+
+- start >> fetch_today_top200 >> end
+
+### data_weather
+
+- start >> clean_weather_data >> end
+
+### data_songs
+
+- start >> clean_song_data >> extract_audio_features >> end
+
+### meta
+
+- start >> generate_meta_profile >> end
