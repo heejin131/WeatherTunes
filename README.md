@@ -285,7 +285,7 @@ df_filtered = df[df["days_on_chart"] < 30].reset_index(drop=True) # 30일 이상
         
 - Streamlit 시각화
 
-  ## DAG 설계
+## DAG 설계
 
 ### raw_weather
 
