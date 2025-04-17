@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:bfc14fa7952dff47eeb0549f0eebecf7a20d358d4bda1ed918f9ddc09cd47091"
+content_hash = "sha256:9aff65e428ffa546616b67a368b23d9b58fb295d7216638b6e30f4cc14ad0379"
 
 [[metadata.targets]]
 requires_python = "==3.12.*"
@@ -944,6 +944,18 @@ groups = ["default"]
 files = [
     {file = "dnspython-2.7.0-py3-none-any.whl", hash = "sha256:b4c34b7d10b51bcc3a5071e7b8dee77939f1e878477eeecc965e9835f63c6c86"},
     {file = "dnspython-2.7.0.tar.gz", hash = "sha256:ce9c432eda0dc91cf618a5cedf1a4e142651196bbcd2c80e89ed5a907e5cfaf1"},
+]
+
+[[package]]
+name = "dotenv"
+version = "0.9.9"
+summary = "Deprecated package"
+groups = ["default"]
+dependencies = [
+    "python-dotenv",
+]
+files = [
+    {file = "dotenv-0.9.9-py2.py3-none-any.whl", hash = "sha256:29cf74a087b31dafdb5a446b6d7e11cbce8ed2741540e2339c69fbef92c94ce9"},
 ]
 
 [[package]]
