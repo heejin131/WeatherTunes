@@ -306,4 +306,5 @@ df_filtered = df[df["days_on_chart"] < 30].reset_index(drop=True) # 30일 이상
 
 ### meta
 
-- start >> generate_meta_profile >> end
+- start >> generate_meta_profile >> copy_to_bigquery >> end
+
