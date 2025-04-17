@@ -51,7 +51,8 @@ def download_weather_raw_text(ds_nodash: str, save_path: str):
         f"https://apihub.kma.go.kr/api/typ01/url/kma_sfctm3.php?"
             f"tm1={ds_nodash}0000&tm2={ds_nodash}0000&stn=108&authKey={auth_key}"
     )
-    response = requests.get(url, encoding='utf-8')
+    response = requests.get(url)
+    response.encoding = "utf-8"
 
     if response.status_code == 200:
         convert_to_csv(response.text, save_path)
