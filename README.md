@@ -150,6 +150,7 @@ bucket/
 │       └── partition: date
 │       └── columns: raw chart data (title, artist, rank, etc.)
 │
+BigQuery/
 ├── data/                        ← 🧹 전처리 완료된 분석 데이터
 │   ├── weather_daily/           ← 🌦️ 평균기온, 범주화 등 정제 날씨
 │   │   └── partition: date
