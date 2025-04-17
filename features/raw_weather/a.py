@@ -40,8 +40,6 @@ def convert_to_csv(text_data: str, save_path: str):
     with fs.open(save_path, 'w') as f:
         df.to_csv(f, index=False, encoding='utf-8')
 
-    print(f"✅ {ds} 날씨 데이터를 {output_path}로 저장 완료")
-
 def download_weather_raw_text(ds_nodash: str, save_path: str):
     auth_key = os.getenv("WEATHER_API_KEY")
     if not auth_key:
@@ -56,6 +54,7 @@ def download_weather_raw_text(ds_nodash: str, save_path: str):
 
     if response.status_code == 200:
         convert_to_csv(response.text, save_path)
+        print(f"✅ {ds_nodash} 날씨 데이터를 {save_path}로 저장 완료")
     else:
         print(f"❌ 요청 실패! 상태코드: {response.status_code}")
         print(response.text)
