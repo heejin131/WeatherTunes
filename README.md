@@ -173,6 +173,13 @@ BigQuery/
 
 <br>
 
+# 🔄 데이터 파이프라인
+
+![pipeline](https://github.com/user-attachments/assets/a4440711-9b1c-483b-8d05-269733b0dca4)
+
+
+<br>
+
 ---
 
 # 🤐 노이즈 
