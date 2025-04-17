@@ -61,6 +61,6 @@ def download_weather_raw_text(ds_nodash: str, save_path: str):
 
 if __name__ == "__main__":
     ds_nodash = sys.argv[1]
-    save_path = f"gs://weather_tunes/weather_raw-{ds_nodash}.txt"
+    save_path = f"gs://weather_tunes/weather_raw-{ds_nodash}.csv"
 
     download_weather_raw_text(ds_nodash, save_path)
