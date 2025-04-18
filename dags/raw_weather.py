@@ -16,7 +16,7 @@ with DAG(
     schedule="@daily",
     start_date=datetime(2023, 1, 1),
     end_date=datetime(2025, 4, 2),
-    catchup=True,
+    catchup=False,
     tags=["spark", "submit", "weather"],
 ) as dag:
     
