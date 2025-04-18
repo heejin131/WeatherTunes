@@ -36,7 +36,6 @@ def convert_to_csv(text_data: str, local_path: str):
     df.replace(["-9", -9, "-9.0", -9.0, "-"], value=pd.NA, inplace=True)
     
     df.to_csv(local_path, index=False, encoding="utf-8", lineterminator="\n")
-    upload_to_gcs(local_path, gcs_path)
 
 def download_weather_raw_text(ds_nodash: str, local_path: str, gcs_path: str):
     auth_key = os.getenv("WEATHER_API_KEY")
