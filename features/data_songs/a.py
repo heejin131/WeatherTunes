@@ -66,14 +66,14 @@ if __name__ == "__main__":
         print("❌ 날짜 인자 필요: python a.py YYYY-MM-DD")
         sys.exit(1)
 
-    ds =  sys.argv[1]
-    csv_path = f"gs://jacob_weathertunes/raw/songs_raw/{ds}.csv"
+    ds_nodash =  sys.argv[1].replace("-", "")
+    parquet_path = f"gs://jacob_weathertunes/data/songs_data/dt={ds_nodash}/*.parquet"
     output_path = f"gs://stundrg-bucket/data/audio_features/"
 
     spark = SparkSession.builder.appName("AudioFeatures").getOrCreate()
 
     try:
-        df_input = spark.read.csv(csv_path, header=True)
+        df_input = spark.read.parquet(parquet_path)
         track_ids = [row.track_id for row in df_input.select("track_id").dropna().distinct().collect()]
     except Exception as e:
         print(f"❌ CSV 로드 실패: {e}")
