@@ -34,7 +34,6 @@ def convert_to_csv(text_data: str, save_path: str):
     ]
 
     df = pd.read_fwf(StringIO("\n".join(data_lines)), colspecs=colspecs, names=names)
-    df = df.apply(pd.to_nemeric, errors="ignore")
     df.replace(["-9", -9, "-9.0", -9.0], pd.NA, inplace=True)
 
     fs = gcsfs.GCSFileSystem()
