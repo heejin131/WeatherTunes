@@ -60,7 +60,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     date_str = sys.argv[1]
-    songs_path = f"/home/airflow/gcs/data/songs_top200/dt={date_str}/songs_top200.parquet"
+    songs_path = f"/home/wsl/temp/airflow/gcs/data/songs_top200/dt={date_str}/songs_top200.parquet"
     
     if not os.path.exists(songs_path):
         print(f"❌ songs_top200 파일을 찾을 수 없습니다: {songs_path}")
@@ -77,7 +77,7 @@ if __name__ == "__main__":
         results.append(result)
 
     df_result = pd.DataFrame(results)
-    output_path = f"/home/airflow/gcs/data/audio_features/dt={date_str}/audio_features.parquet"
+    output_path = f"/home/wsl/temp/airflow/gcs/data/audio_features/dt={date_str}/audio_features.parquet"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df_result.to_parquet(output_path, index=False)
 
