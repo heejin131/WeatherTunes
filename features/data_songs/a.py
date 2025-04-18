@@ -66,9 +66,9 @@ if __name__ == "__main__":
         print("❌ 날짜 인자 필요: python a.py YYYY-MM-DD")
         sys.exit(1)
 
-    ds_nodash =  sys.argv[1].replace("-", "")
-    csv_path = f"gs://jacob_weathertunes/raw/songs_raw/{ds_nodash}.csv"
-    output_path = f"gs://stundrg-bucket/data/audio_features/dt={ds_nodash}/audio_features.parquet"
+    ds =  sys.argv[1]
+    csv_path = f"gs://jacob_weathertunes/raw/songs_raw/{ds}.csv"
+    output_path = f"gs://stundrg-bucket/data/audio_features/"
 
     spark = SparkSession.builder.appName("AudioFeatures").getOrCreate()
 
