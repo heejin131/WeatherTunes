@@ -63,7 +63,8 @@ if __name__ == "__main__":
     
     # ✅ GCS에서 CSV 로딩
     csv_path = f"gs://jacob_weathertunes/raw/songs_raw/{date_str}.csv"
-    output_path = f"gs://jacob_weathertunes/data/audio_features/dt={date_str}/audio_features.parquet"
+    output_path = f"gs://stundrg-bucket/data/audio_features/dt={date_str}/audio_features.parquet"
+    # output_path = f"gs://jacob_weathertunes/data/audio_features/dt={date_str}/audio_features.parquet"
 
     try:
         df_input = pd.read_csv(csv_path, storage_options={"token": "default"})
