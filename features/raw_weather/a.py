@@ -29,7 +29,7 @@ def convert_to_csv(text_data: str, save_path: str):
 
     fs = gcsfs.GCSFileSystem()
     with fs.open(save_path, mode='wt', encoding='utf-8', newline='') as f:
-        df.to_csv(f, index=False)
+        df.to_csv(f, index=False, line_terminator="\n")
 
 def download_weather_raw_text(ds_nodash: str, save_path: str):
     auth_key = os.getenv("WEATHER_API_KEY")
