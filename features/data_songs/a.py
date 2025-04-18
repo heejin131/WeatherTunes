@@ -12,11 +12,7 @@ import os
 def scrape_track_data(track_id):
     url = f"https://tunebat.com/Info/track/{track_id}"
     options = uc.ChromeOptions()
-
-    # ✅ 환경변수로 headless 여부 제어 (기본 False)
-    HEADLESS_MODE = os.getenv("HEADLESS", "false").lower() == "true"
-    if HEADLESS_MODE:
-        options.add_argument("--headless=new")
+    options.add_argument("--headless=new")
 
     # ✅ 봇 탐지 우회 설정
     options.add_argument("--no-sandbox")
