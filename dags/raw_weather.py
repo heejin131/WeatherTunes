@@ -17,7 +17,7 @@ with DAG(
     start_date=datetime(2023, 1, 1),
     end_date=datetime(2025, 4, 2),
     catchup=True,
-    concurrency=10,
+    max_active_runs=3,
     tags=["spark", "submit", "weather"],
 ) as dag:
     
@@ -27,7 +27,7 @@ with DAG(
     fetch_today_weather = BashOperator(
         task_id="fetch_today_weather",
         bash_command="""
-            ssh -i ~/.ssh/gcp-joon-key joon@34.47.90.224 \
+            ssh -i ~/.ssh/gcp-joon-key joon@34.22.91.104 \
             "/home/joon/code/WeatherTunes/features/raw_weather/run.sh {{ ds_nodash }} /home/joon/code/WeatherTunes/features/raw_weather/a.py"
         """
     )
