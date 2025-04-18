@@ -87,7 +87,7 @@ if __name__ == "__main__":
     print(f"🚀 총 {len(track_ids)}개 트랙 크롤링 시작")
 
     results = [
-    (tid, scrape_track_data(tid), ds_nodash)
+    (tid, scrape_track_data(tid), ds)
     for tid in track_ids
 ]
 
