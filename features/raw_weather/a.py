@@ -36,6 +36,7 @@ def convert_to_csv(text_data: str, local_path: str):
     df.replace(["-9", -9, "-9.0", -9.0, "-"], value=pd.NA, inplace=True)
     
     df.to_csv(local_path, index=False, encoding="utf-8", lineterminator="\n")
+    upload_to_gcs(local_path, gcs_path)
 
 def download_weather_raw_text(ds_nodash: str, local_path: str, gcs_path: str):
     auth_key = os.getenv("WEATHER_API_KEY")
@@ -50,7 +51,7 @@ def download_weather_raw_text(ds_nodash: str, local_path: str, gcs_path: str):
     response.encoding = "utf-8"
 
     if response.status_code == 200:
-        convert_to_csv(response.text, gcs_path)
+        convert_to_csv(response.text, local_path)
         upload_to_gcs(local_path, gcs_path)
 
         print(f"✅ {ds_nodash} 날씨 데이터를 {save_path}로 저장 완료")
