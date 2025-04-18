@@ -17,6 +17,7 @@ with DAG(
     start_date=datetime(2023, 1, 1),
     end_date=datetime(2025, 4, 2),
     catchup=True,
+    max_active_runs=7,
     concurrency=10,
     tags=["spark", "submit", "weather"],
 ) as dag:
