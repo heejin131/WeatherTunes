@@ -26,7 +26,7 @@ def scrape_track_data(track_id):
     # ✅ 크롬 실행 경로 (인스턴스 VM 기준)
     options.binary_location = "/usr/bin/google-chrome"
 
-    driver = uc.Chrome(options=options)
+    driver = uc.Chrome(options=options, use_subprocess=False)
 
     try:
         driver.get(url)
