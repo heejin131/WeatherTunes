@@ -30,10 +30,11 @@ def convert_to_csv(text_data: str, save_path: str):
         'WC', 'WP', 'WW', 'CA_TOT', 'CA_MID', 'CH_MIN', 'CT',
         'CT_TOP', 'CT_MID', 'CT_LOW', 'VS', 'SS', 'SI', 'ST_GD',
         'TS', 'TE_005', 'TE_01', 'TE_02', 'TE_03', 'ST_SEA', 'WH',
-        'BF', 'IR', 'IX', 'LAST'
+        'BF', 'IR', 'IX'
     ]
 
     df = pd.read_fwf(StringIO("\n".join(data_lines)), colspecs=colspecs, names=names)
+    df = df.apply(pd.to_nemeric, errors="ignore")
     df.replace(["-9", -9, "-9.0", -9.0], pd.NA, inplace=True)
 
     fs = gcsfs.GCSFileSystem()
