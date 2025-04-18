@@ -4,6 +4,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import pandas as pd
 import time, random
+import sys, os
 from datetime import datetime
 
 def scrape_track_data(track_id):
@@ -23,18 +24,12 @@ def scrape_track_data(track_id):
             try:
                 if label == "BPM":
                     el = WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((
-                            By.XPATH,
-                            f"//span[text()='{label}']/preceding-sibling::h3"
-                        ))
+                        EC.presence_of_element_located((By.XPATH, f"//span[text()='{label}']/preceding-sibling::h3"))
                     )
                     return el.text
                 else:
                     wrapper = WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((
-                            By.XPATH,
-                            f"//span[translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='{label.lower()}']/ancestor::div[contains(@class, '_1MCwQ')]"
-                        ))
+                        EC.presence_of_element_located((By.XPATH, f"//span[translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='{label.lower()}']/ancestor::div[contains(@class, '_1MCwQ')]"))
                     )
                     value_el = wrapper.find_element(By.CLASS_NAME, "ant-progress-text")
                     return value_el.get_attribute("title")
@@ -59,27 +54,33 @@ def scrape_track_data(track_id):
         time.sleep(random.uniform(3, 6))
 
 
-# ✅ 트랙 ID 리스트
-track_ids = [
-    "1qCHUbe8BuHymkHuzHEYoi",
-    # 추가할 track_id 들...
-]
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("❌ 날짜 인자가 필요합니다. 예: python a.py 2025-04-18")
+        sys.exit(1)
 
-# ✅ 시작 시간 기록
-start_time = datetime.now()
+    date_str = sys.argv[1]
+    songs_path = f"/home/airflow/gcs/data/songs_top200/dt={date_str}/songs_top200.parquet"
+    
+    if not os.path.exists(songs_path):
+        print(f"❌ songs_top200 파일을 찾을 수 없습니다: {songs_path}")
+        sys.exit(1)
 
-# ✅ 크롤링 결과 저장
-results = []
-for tid in track_ids:
-    result = scrape_track_data(tid)
-    results.append(result)
+    df_input = pd.read_parquet(songs_path)
+    track_ids = df_input["track_id"].dropna().unique().tolist()
 
-# ✅ DataFrame 변환 및 Parquet 저장
-df = pd.DataFrame(results)
-df.to_parquet("tunebat_features.parquet", index=False)
+    start_time = datetime.now()
+    results = []
 
-# ✅ 종료 시간 및 소요 시간 출력
-end_time = datetime.now()
-elapsed = end_time - start_time
-print("✅ parquet 저장 완료: tunebat_features.parquet")
-print(f"⏱️ 총 소요 시간: {elapsed}")
+    for tid in track_ids:
+        result = scrape_track_data(tid)
+        results.append(result)
+
+    df_result = pd.DataFrame(results)
+    output_path = f"/home/airflow/gcs/data/audio_features/dt={date_str}/audio_features.parquet"
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    df_result.to_parquet(output_path, index=False)
+
+    end_time = datetime.now()
+    print(f"✅ 저장 완료: {output_path}")
+    print(f"⏱️ 총 소요 시간: {end_time - start_time}")
