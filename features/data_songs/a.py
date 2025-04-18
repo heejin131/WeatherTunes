@@ -4,7 +4,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import pandas as pd
 import time, random
-import sys, os
+import sys
 from datetime import datetime
 
 def scrape_track_data(track_id):
@@ -60,14 +60,21 @@ if __name__ == "__main__":
         sys.exit(1)
 
     date_str = sys.argv[1]
-    songs_path = f"/home/wsl/temp/airflow/gcs/data/songs_top200/dt={date_str}/songs_top200.parquet"
     
-    if not os.path.exists(songs_path):
-        print(f"❌ songs_top200 파일을 찾을 수 없습니다: {songs_path}")
+    # ✅ GCS에서 CSV 로딩
+    csv_path = f"gs://jacob_weathertunes/raw/songs_raw/{date_str}.csv"
+    output_path = f"gs://jacob_weathertunes/data/audio_features/dt={date_str}/audio_features.parquet"
+
+    try:
+        df_input = pd.read_csv(csv_path, storage_options={"token": "default"})
+    except Exception as e:
+        print(f"❌ GCS에서 CSV 불러오기 실패: {e}")
         sys.exit(1)
 
-    df_input = pd.read_parquet(songs_path)
     track_ids = df_input["track_id"].dropna().unique().tolist()
+    if len(track_ids) == 0:
+        print("⚠️ track_id가 비어 있습니다. 종료합니다.")
+        sys.exit(0)
 
     start_time = datetime.now()
     results = []
@@ -77,10 +84,12 @@ if __name__ == "__main__":
         results.append(result)
 
     df_result = pd.DataFrame(results)
-    output_path = f"/home/wsl/temp/airflow/gcs/data/audio_features/dt={date_str}/audio_features.parquet"
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    df_result.to_parquet(output_path, index=False)
+
+    try:
+        df_result.to_parquet(output_path, index=False, storage_options={"token": "default"})
+        print(f"✅ 저장 완료: {output_path}")
+    except Exception as e:
+        print(f"❌ 저장 실패: {e}")
 
     end_time = datetime.now()
-    print(f"✅ 저장 완료: {output_path}")
     print(f"⏱️ 총 소요 시간: {end_time - start_time}")
