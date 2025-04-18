@@ -60,7 +60,7 @@ def download_weather_raw_text(ds_nodash: str, local_path: str, gcs_path: str):
 
 if __name__ == "__main__":
     ds_nodash = sys.argv[1]
-    local_path = f"/tmp/weather_raw-{ds_nodash}.csv"
+    local_path = f"/home/joon/temp/weather/weather_raw-{ds_nodash}.csv"
     save_path = f"gs://weather_tunes/weather_raw-{ds_nodash}.csv"
 
     download_weather_raw_text(ds_nodash, local_path, save_path)
