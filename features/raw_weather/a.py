@@ -11,17 +11,7 @@ load_dotenv()
 def convert_to_csv(text_data: str, save_path: str):
     lines = text_data.splitlines()
     data_lines = [line for line in lines if line.strip() and not line.startswith("#")]
-
-    colspecs = [
-        (0, 12), (12, 16), (16, 20), (20, 24), (24, 28), (28, 34), (34, 38),
-        (38, 46), (46, 54), (54, 58), (58, 64), (64, 71), (71, 78), (78, 85),
-        (85, 92), (92, 99), (99, 106), (106, 113), (113, 120), (120, 127),
-        (127, 134), (134, 141), (141, 144), (144, 147), (147, 192),
-        (192, 195), (195, 198), (198, 202), (202, 210), (210, 213), (213, 216),
-        (216, 219), (219, 224), (224, 229), (229, 235), (235, 239), (239, 244),
-        (244, 251), (251, 258), (258, 265), (265, 272), (272, 279), (279, 286),
-        (286, 289), (289, 293), (293, 294)
-    ]
+    cleaned = "\n".join(data_lines)
 
     names = [
         'TM', 'STN', 'WD', 'WS', 'GST_WD', 'GST_WS', 'GST_TM',
@@ -33,8 +23,9 @@ def convert_to_csv(text_data: str, save_path: str):
         'BF', 'IR', 'IX'
     ]
 
-    df = pd.read_fwf(StringIO("\n".join(data_lines)), colspecs=colspecs, names=names)
-    df.replace(["-9", -9, "-9.0", -9.0], pd.NA, inplace=True)
+    df = pd.read_csv(StringIO(cleaned), delim_whitespace=True, header=None)
+    df.columns = names
+    df.replace(["-9", -9, "-9.0", -9.0, "-"], value=pd.NA, inplace=True)
 
     fs = gcsfs.GCSFileSystem()
     with fs.open(save_path, 'w') as f:
