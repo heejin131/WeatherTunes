@@ -1,17 +1,21 @@
 import sys
-import pandas as pd
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import regexp_extract, col, lit
 
 def convert_to_parquet(raw_data_path: str, save_path: str, dt: str):
-    df = pd.read_csv(raw_data_path)
-    df["track_id"] = df["uri"].str.extract(r"track:([a-zA-Z0-9]+)")
-    df = df[["track_id", "artist_names", "track_name", "days_on_chart", "streams"]]
-    df["dt"] = dt
-
     spark = SparkSession.builder.appName(f"save_song_data_{dt}").getOrCreate()
+    
+    df = spark.read.option("header", "true").csv(raw_data_path)
+    df = df.withColumn("track_id", regexp_extract("uri", r"track:([a-zA-Z0-9]+)", 1))
+    df = df.select(
+        "track_id",
+        "artist_names",
+        "track_name",
+        "days_on_cahrt",
+        "streams"
+    ).withColumn("dt", lit(dt))
 
-    spark_df = spark.createDataFrame(df)
-    spark_df.write.mode("overwrite").partitionBy("dt").parquet(save_path)
+    df.write.mode("overwrite").partitionBy("dt").parquet(save_path)
 
     print(f"✅ 저장 완료: {save_path} (partitioned by dt={dt})")
 
