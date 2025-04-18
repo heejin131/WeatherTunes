@@ -28,8 +28,8 @@ def convert_to_csv(text_data: str, save_path: str):
     df.replace(["-9", -9, "-9.0", -9.0, "-"], value=pd.NA, inplace=True)
 
     fs = gcsfs.GCSFileSystem()
-    with fs.open(save_path, 'w') as f:
-        df.to_csv(f, index=False, encoding='utf-8')
+    with fs.open(save_path, mode='wt', encoding='utf-8', newline='\n') as f:
+        df.to_csv(f, index=False)
 
 def download_weather_raw_text(ds_nodash: str, save_path: str):
     auth_key = os.getenv("WEATHER_API_KEY")
