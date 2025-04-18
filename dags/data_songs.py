@@ -17,6 +17,7 @@ with DAG(
     schedule_interval="@daily",
     catchup=True,
     tags=["weathertunes", "audio"],
+    max_active_runs=1, 
 ) as dag:
 
     start = EmptyOperator(task_id="start")
