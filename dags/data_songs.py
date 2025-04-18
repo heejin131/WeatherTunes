@@ -25,7 +25,7 @@ with DAG(
         task_id="process_songs_data",
         bash_command="""
             ssh -i ~/.ssh/gcp-joon-key joon@34.47.90.224 \
-            "/home/joon/code/WeatherTunes/features/data_songs/run.sh {{ ds }} /home/joon/code/WeatherTunes/features/data_songs/b.py"
+            "/home/wsl/code/WeatherTunes/features/data_songs/run.sh {{ ds }} /home/wsl/code/WeatherTunes/features/data_songs/b.py"
         """
     )
 
