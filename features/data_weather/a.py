@@ -54,7 +54,7 @@ def convert_to_parquet(raw_data_path: str, save_path: str, dt: str):
     )
     
     # 저장
-    rdf.write.mode("overwrite").partitionBy("dt", "weather_code", "temp_code").parquet(save_path)
+    rdf.write.mode("overwrite").partitionBy("dt").parquet(save_path)
 
     print(f"✅ 저장 완료: {save_path} (dt={dt})")
 
