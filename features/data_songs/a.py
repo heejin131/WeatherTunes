@@ -1,24 +1,38 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType, StructField, StringType
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import pandas as pd
-import time, random
-import sys
 from datetime import datetime
+import time, random, sys
+import os
 
 def scrape_track_data(track_id):
     url = f"https://tunebat.com/Info/track/{track_id}"
     options = uc.ChromeOptions()
+
+    # ✅ 환경변수로 headless 여부 제어 (기본 False)
+    HEADLESS_MODE = os.getenv("HEADLESS", "false").lower() == "true"
+    if HEADLESS_MODE:
+        options.add_argument("--headless=new")
+
+    # ✅ 봇 탐지 우회 설정
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
     driver = uc.Chrome(options=options, use_subprocess=True)
 
     try:
         driver.get(url)
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-        time.sleep(3)
+
+        # 💡 랜덤 대기 (Cloudflare 챌린지 회피)
+        sleep_initial = round(random.uniform(2.5, 5.5), 2)
+        print(f"⏳ 페이지 로딩 후 {sleep_initial}초 대기...")
+        time.sleep(sleep_initial)
 
         def get_metric(label):
             try:
@@ -37,60 +51,55 @@ def scrape_track_data(track_id):
                 print(f"❗ {label} 추출 실패: {e}")
                 return "N/A"
 
-        bpm = get_metric("BPM")
-        dance = get_metric("Danceability")
-        happy = get_metric("Happiness")
-
         print(f"🎧 {track_id} 추출 완료")
-        return {
-            "track_id": track_id,
-            "BPM": bpm,
-            "Danceability": dance,
-            "Happiness": happy
-        }
+        return (track_id, get_metric("BPM"), get_metric("Danceability"), get_metric("Happiness"))
 
     finally:
         driver.quit()
-        time.sleep(random.uniform(3, 6))
-
+        sleep_after = round(random.uniform(4, 8), 2)
+        print(f"🛌 {sleep_after}초 휴식 중 (봇 방지)")
+        time.sleep(sleep_after)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("❌ 날짜 인자가 필요합니다. 예: python a.py 2025-04-18")
+        print("❌ 날짜 인자 필요: python a.py YYYY-MM-DD")
         sys.exit(1)
 
     date_str = sys.argv[1]
-    
-    # ✅ GCS에서 CSV 로딩
-    csv_path = f"gs://jacob_weathertunes/raw/songs_raw/{date_str}.csv"
-    output_path = f"gs://stundrg-bucket/data/audio_features/dt={date_str}/audio_features.parquet"
-    # output_path = f"gs://jacob_weathertunes/data/audio_features/dt={date_str}/audio_features.parquet"
+    csv_path = f"gs://jacob_weathertunes/raw/songs_raw/{{ds_nodash}}.csv"
+    output_path = f"gs://stundrg-bucket/data/audio_features/dt={{ds_nodash}}/audio_features.parquet"
+
+    spark = SparkSession.builder.appName("AudioFeatures").getOrCreate()
 
     try:
-        df_input = pd.read_csv(csv_path, storage_options={"token": "default"})
+        df_input = spark.read.csv(csv_path, header=True)
+        track_ids = [row.track_id for row in df_input.select("track_id").dropna().distinct().collect()]
     except Exception as e:
-        print(f"❌ GCS에서 CSV 불러오기 실패: {e}")
+        print(f"❌ CSV 로드 실패: {e}")
         sys.exit(1)
 
-    track_ids = df_input["track_id"].dropna().unique().tolist()
-    if len(track_ids) == 0:
-        print("⚠️ track_id가 비어 있습니다. 종료합니다.")
+    if not track_ids:
+        print("⚠️ track_id가 없습니다.")
         sys.exit(0)
 
     start_time = datetime.now()
-    results = []
+    print(f"🚀 총 {len(track_ids)}개 트랙 크롤링 시작")
 
-    for tid in track_ids:
-        result = scrape_track_data(tid)
-        results.append(result)
+    results = [scrape_track_data(tid) for tid in track_ids]
 
-    df_result = pd.DataFrame(results)
+    schema = StructType([
+        StructField("track_id", StringType(), True),
+        StructField("BPM", StringType(), True),
+        StructField("Danceability", StringType(), True),
+        StructField("Happiness", StringType(), True),
+    ])
+
+    df_result = spark.createDataFrame(results, schema)
 
     try:
-        df_result.to_parquet(output_path, index=False, storage_options={"token": "default"})
+        df_result.write.mode("overwrite").parquet(output_path)
         print(f"✅ 저장 완료: {output_path}")
     except Exception as e:
-        print(f"❌ 저장 실패: {e}")
+        print(f"❌ Parquet 저장 실패: {e}")
 
-    end_time = datetime.now()
-    print(f"⏱️ 총 소요 시간: {end_time - start_time}")
+    print(f"⏱️ 소요 시간: {datetime.now() - start_time}")
