@@ -11,7 +11,7 @@ def convert_to_parquet(raw_data_path: str, save_path: str, dt: str):
         "track_id",
         "artist_names",
         "track_name",
-        "days_on_cahrt",
+        "days_on_chart",
         "streams"
     ).withColumn("dt", lit(dt))
 
