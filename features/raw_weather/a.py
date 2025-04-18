@@ -5,10 +5,18 @@ import gcsfs
 import pandas as pd
 from io import StringIO
 from dotenv import load_dotenv
+from google.cloud import storage
 
 load_dotenv()
 
-def convert_to_csv(text_data: str, save_path: str):
+def upload_to_gcs(local_path: str, gcs_path: str):
+    client = storage.Client()
+    bucket_name, blob_path = gcs_path.replace("gs://", "").split("/", 1)
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_path)
+    blob.upload_from_filename(local_path)
+
+def convert_to_csv(text_data: str, local_path: str):
     lines = text_data.splitlines()
     data_lines = [line for line in lines if line.strip() and not line.startswith("#")]
     cleaned = "\n".join(data_lines)
@@ -27,11 +35,9 @@ def convert_to_csv(text_data: str, save_path: str):
     df.columns = names
     df.replace(["-9", -9, "-9.0", -9.0, "-"], value=pd.NA, inplace=True)
     
-    fs = gcsfs.GCSFileSystem()
-    with fs.open(save_path, mode='wt', encoding='utf-8', newline='') as f:
-        df.to_csv(f, index=False, lineterminator="\n")
+    df.to_csv(local_path, index=False, encoding="utf-8", lineterminator="\n")
 
-def download_weather_raw_text(ds_nodash: str, save_path: str):
+def download_weather_raw_text(ds_nodash: str, local_path: str, gcs_path: str):
     auth_key = os.getenv("WEATHER_API_KEY")
     if not auth_key:
         raise ValueError("❌ WEATHER_API_KEY가 없습니다.")
@@ -44,7 +50,9 @@ def download_weather_raw_text(ds_nodash: str, save_path: str):
     response.encoding = "utf-8"
 
     if response.status_code == 200:
-        convert_to_csv(response.text, save_path)
+        convert_to_csv(response.text, gcs_path)
+        upload_to_gcs(local_path, gcs_path)
+
         print(f"✅ {ds_nodash} 날씨 데이터를 {save_path}로 저장 완료")
     else:
         print(f"❌ 요청 실패! 상태코드: {response.status_code}")
@@ -52,6 +60,7 @@ def download_weather_raw_text(ds_nodash: str, save_path: str):
 
 if __name__ == "__main__":
     ds_nodash = sys.argv[1]
+    local_path = f"/tmp/weather_raw-{ds_nodash}.csv"
     save_path = f"gs://weather_tunes/weather_raw-{ds_nodash}.csv"
 
-    download_weather_raw_text(ds_nodash, save_path)
+    download_weather_raw_text(ds_nodash, local_path, save_path)
