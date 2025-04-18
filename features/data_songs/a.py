@@ -1,5 +1,6 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, StringType
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -65,9 +66,9 @@ if __name__ == "__main__":
         print("❌ 날짜 인자 필요: python a.py YYYY-MM-DD")
         sys.exit(1)
 
-    date_str = sys.argv[1]
-    csv_path = f"gs://jacob_weathertunes/raw/songs_raw/{{ds_nodash}}.csv"
-    output_path = f"gs://stundrg-bucket/data/audio_features/dt={{ds_nodash}}/audio_features.parquet"
+    ds_nodash =  sys.argv[1].replace("-", "")
+    csv_path = f"gs://jacob_weathertunes/raw/songs_raw/{ds_nodash}.csv"
+    output_path = f"gs://stundrg-bucket/data/audio_features/dt={ds_nodash}/audio_features.parquet"
 
     spark = SparkSession.builder.appName("AudioFeatures").getOrCreate()
 
@@ -85,21 +86,25 @@ if __name__ == "__main__":
     start_time = datetime.now()
     print(f"🚀 총 {len(track_ids)}개 트랙 크롤링 시작")
 
-    results = [scrape_track_data(tid) for tid in track_ids]
+    results = [
+    (tid, scrape_track_data(tid), ds_nodash)
+    for tid in track_ids
+]
 
     schema = StructType([
-        StructField("track_id", StringType(), True),
-        StructField("BPM", StringType(), True),
-        StructField("Danceability", StringType(), True),
-        StructField("Happiness", StringType(), True),
-    ])
+    StructField("track_id", StringType(), True),
+    StructField("BPM", IntegerType(), True),
+    StructField("Danceability", IntegerType(), True),
+    StructField("Happiness", IntegerType(), True),
+    StructField("dt", StringType(), True),
+])
 
     df_result = spark.createDataFrame(results, schema)
 
     try:
-        df_result.write.mode("overwrite").parquet(output_path)
+        df_result.write.mode("overwrite").partitionBy("dt").save(output_path)
         print(f"✅ 저장 완료: {output_path}")
     except Exception as e:
         print(f"❌ Parquet 저장 실패: {e}")
 
-    print(f"⏱️ 소요 시간: {datetime.now() - start_time}")
+        print(f"⏱️ 소요 시간: {datetime.now() - start_time}")
