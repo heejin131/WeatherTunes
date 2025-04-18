@@ -26,9 +26,8 @@ with DAG(
     fetch_today_weather = BashOperator(
         task_id="fetch_today_weather",
         bash_command="""
-            echo {{ ds }}
             ssh -i ~/.ssh/gcp-joon-key joon@34.47.90.224 \
-            "/home/joon/code/WeatherTunes/features/raw_weather/run.sh {{ ds }} /home/joon/code/WeatherTunes/features/raw_weather/a.py"
+            "/home/joon/code/WeatherTunes/features/raw_weather/run.sh {{ ds_nodash }} /home/joon/code/WeatherTunes/features/raw_weather/a.py"
         """
     )
     
