@@ -39,5 +39,4 @@ with DAG(
 
     end = EmptyOperator(task_id="end")
 
-    start >> process_songs_data  >> extract_audio_features >> end
-~                                                                       
+    start >> process_songs_data  >> extract_audio_features >> end                                                                       
