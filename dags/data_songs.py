@@ -18,6 +18,7 @@ with DAG(
     catchup=True,
     tags=["weathertunes", "audio"],
     max_active_runs=1, 
+    max_active_tasks=1,
 ) as dag:
 
     start = EmptyOperator(task_id="start")
@@ -25,7 +26,7 @@ with DAG(
     process_songs_data = BashOperator(
         task_id="process_songs_data",
         bash_command="""
-            ssh -i ~/.ssh/id_rsa wsl@34.64.195.187 \
+            ssh -i ~/.ssh/gcp-hyun-key wsl@34.64.195.187 \
             "/home/wsl/code/WeatherTunes/features/data_songs/run.sh {{ ds }} /home/wsl/code/WeatherTunes/features/data_songs/b.py"
         """
     )
@@ -33,7 +34,7 @@ with DAG(
     extract_audio_features = BashOperator(
         task_id="extract_audio_features",
         bash_command="""
-            ssh -i ~/id_rsa wsl@34.64.195.187 \
+            ssh -i ~/.ssh/gcp-hyun-key wsl@34.64.195.187 \
             "/home/wsl/code/WeatherTunes/features/data_songs/run.sh {{ ds }} /home/wsl/code/WeatherTunes/features/data_songs/a.py"
         """
     )
