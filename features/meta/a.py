@@ -8,7 +8,7 @@ def merge_data(weather_path: str, songs_path: str, audio_features_path: str, sav
             .getOrCreate()
     
     weather_df = spark.read.parquet(weather_path)
-    weather_df = weahter_df.withColumn("dt", lit(dt))
+    weather_df = weather_df.withColumn("dt", lit(dt))
 
     songs_df = spark.read.parquet(songs_path) \
         .filter("days_on_chart < 30") \
