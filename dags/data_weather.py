@@ -8,16 +8,15 @@ DAG_ID = "data_weather"
 with DAG(
     DAG_ID,
     default_args={
-        "depends_on_past": True,
         "retries": 1,
         "retry_delay": timedelta(seconds=3)
     },
     description="Processing weather data",
     schedule="@daily",
-    start_date=datetime(2023, 1, 1),
+    start_date=datetime(2023, 2, 14),
     end_date=datetime(2025, 4, 2),
     catchup=True,
-    max_active_runs=1,
+    max_active_runs=7,
     tags=["spark", "submit", "weather"],
 ) as dag:
 
