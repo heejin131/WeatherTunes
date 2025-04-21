@@ -1,21 +1,20 @@
-from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType
-from pyspark.sql.utils import AnalysisException
-from datetime import datetime, timedelta
-import undetected_chromedriver as uc
+import os
+import pandas as pd
+import gcsfs
+import re
+import sys, traceback
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium_stealth import stealth
-import time, random, sys, os
-
+import undetected_chromedriver as uc
+import time, random
 
 def to_int_safe(value):
     try:
         return int(value)
     except:
         return None
-
 
 def scrape_track_data(track_id):
     url = f"https://tunebat.com/Info/track/{track_id}"
@@ -47,120 +46,125 @@ def scrape_track_data(track_id):
     try:
         driver.get(url)
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-        sleep_initial = round(random.uniform(2.5, 5.5), 2)
-        print(f"\n⏳ [{track_id}] 페이지 로딩 후 {sleep_initial}초 대기...", flush=True)
-        time.sleep(sleep_initial)
+        time.sleep(random.uniform(2.5, 5.5))
 
         def get_metric(label):
             try:
-                print(f"🔍 [{track_id}] {label} 추출 시도 중...", flush=True)
-
                 if label == "BPM":
                     el = WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located((By.XPATH, f"//span[text()='{label}']/preceding-sibling::h3"))
                     )
-                    value = el.text
+                    return el.text
                 else:
                     wrapper = WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located((By.XPATH,
                             f"//span[translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='{label.lower()}']/ancestor::div[contains(@class, '_1MCwQ')]"))
                     )
                     value_el = wrapper.find_element(By.CLASS_NAME, "ant-progress-text")
-                    value = value_el.get_attribute("title")
-
-                print(f"✅ [{track_id}] {label} 원본값: {value} → 정수 변환: {to_int_safe(value)}", flush=True)
-                return value
-            except Exception as e:
-                print(f"❌ [{track_id}] {label} 추출 실패: {e}", flush=True)
+                    return value_el.get_attribute("title")
+            except:
                 return "N/A"
 
-        result = (
-            track_id,
-            to_int_safe(get_metric("BPM")),
-            to_int_safe(get_metric("Danceability")),
-            to_int_safe(get_metric("Happiness"))
-        )
-
-        print(f"📦 최종 결과: {result}", flush=True)
-        return result
+        return {
+            "track_id": track_id,
+            "BPM": to_int_safe(get_metric("BPM")),
+            "Danceability": to_int_safe(get_metric("Danceability")),
+            "Happiness": to_int_safe(get_metric("Happiness")),
+        }
 
     finally:
         driver.quit()
-        sleep_after = round(random.uniform(4, 7), 2)
-        print(f"🛌 {sleep_after}초 휴식 중 (봇 방지)", flush=True)
-        time.sleep(sleep_after)
+        time.sleep(random.uniform(4, 7))
+
+import multiprocessing as mp
+
+def worker(track_id, return_dict):
+    try:
+        result = scrape_track_data(track_id)
+        return_dict["result"] = result
+    except Exception as e:
+        return_dict["error"] = str(e)
+
+def run_with_timeout(track_id, timeout=30):
+    manager = mp.Manager()
+    return_dict = manager.dict()
+    p = mp.Process(target=worker, args=(track_id, return_dict))
+    p.start()
+    p.join(timeout)
+
+    if p.is_alive():
+        p.terminate()
+        p.join()
+        print(f"❌ {track_id} 타임아웃으로 중단됨")
+        return None
+    if "result" in return_dict:
+        return return_dict["result"]
+    else:
+        print(f"❌ {track_id} 오류 발생: {return_dict.get('error')}")
+        return None
 
 
-def scrape_track_data_with_retry(track_id, retries=2):
-    for attempt in range(retries + 1):
-        try:
-            return scrape_track_data(track_id)
-        except Exception as e:
-            print(f"⚠️ {track_id} 재시도 {attempt+1}/{retries + 1}: {e}", flush=True)
-            time.sleep(random.uniform(1, 3))
-    return (track_id, None, None, None)
+def get_latest_partition(bucket_path):
+    fs = gcsfs.GCSFileSystem()
+    try:
+        dirs = fs.ls(bucket_path)
+        partitions = [re.search(r'dt=(\d{8})', d) for d in dirs]
+        dates = [match.group(1) for match in partitions if match]
+        return max(dates) if dates else None
+    except Exception as e:
+        print(f"❌ GCS 파티션 목록 조회 실패: {e}")
+        return None
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("❌ 날짜 인자 필요: python a.py YYYYMMDD", flush=True)
+    input_base = "gs://jacob_weathertunes/data/songs_top200/"
+    output_path = "gs://stundrg-bucket/data/audio_features/"
+
+    # ✅ 날짜 인자 받기
+    if len(sys.argv) == 2:
+        target_date = sys.argv[1]
+        print(f"📦 입력 날짜 인자: {target_date}")
+    else:
+        target_date = get_latest_partition(input_base)
+        print(f"📅 최신 날짜 자동 선택: {target_date}")
+
+    if not target_date:
+        print("❌ 유효한 날짜를 찾을 수 없습니다.")
         sys.exit(1)
 
-    ds = sys.argv[1]
-    parquet_path = f"gs://jacob_weathertunes/data/songs_top200/dt={ds}/*.parquet"
-    prev_path = f"gs://stundrg-bucket/data/audio_features/dt={ds}/*.parquet"
-
-    spark = SparkSession.builder \
-        .appName("AudioFeatures") \
-        .config("spark.sql.sources.partitionOverwriteMode", "dynamic") \
-        .getOrCreate()
+    input_path = f"{input_base}dt={target_date}/"
+    print(f"📥 입력 경로: {input_path}")
 
     try:
-        # 🔹 현재 트랙 목록
-        df_today = spark.read.parquet(parquet_path)
-        today_ids_df = df_today.select("track_id").dropna().distinct()
-
-        # 🔹 이미 수집된 트랙 필터링
-        try:
-            df_existing = spark.read.parquet(prev_path)
-            prev_ids_df = df_existing.select("track_id").dropna().distinct()
-            today_ids_df = today_ids_df.join(prev_ids_df, on="track_id", how="left_anti")
-            print(f"✅ 중복 제거 후 track_id 개수: {today_ids_df.count()}", flush=True)
-        except AnalysisException:
-            print("ℹ️ 이전 저장 데이터 없음. 전체 수집 진행", flush=True)
-
-        # track_ids = [row.track_id for row in today_ids_df.collect()]
-        track_ids = [row.track_id for row in today_ids_df.collect()[:5]]  # 🔹 테스트용 5개만
-
+        df_input = pd.read_parquet(input_path)
+        track_ids = df_input["track_id"].dropna().unique().tolist()
     except Exception as e:
-        print(f"❌ Parquet 로드 실패: {e}", flush=True)
+        print(f"❌ 입력 파일 로드 실패: {e}")
+        traceback.print_exc()
         sys.exit(1)
 
     if not track_ids:
-        print("⚠️ 크롤링할 track_id가 없습니다.", flush=True)
+        print("⚠️ track_id가 없습니다.")
         sys.exit(0)
 
-    print(f"\n🚀 총 {len(track_ids)}개 track_id 추출 시작", flush=True)
+    print(f"🚀 총 {len(track_ids)}개 트랙 수집 시작")
 
-    results = [
-        scrape_track_data_with_retry(tid)
-        for tid in track_ids
-    ]
+    for i, tid in enumerate(track_ids):
+        try:
+            print(f"[{i+1}/{len(track_ids)}] 🎵 {tid} 크롤링 중...")
 
-    schema = StructType([
-        StructField("track_id", StringType(), True),
-        StructField("BPM", IntegerType(), True),
-        StructField("Danceability", IntegerType(), True),
-        StructField("Happiness", IntegerType(), True),
-    ])
+            result = run_with_timeout(tid, timeout=30)
+            if result is None:
+                continue  # 실패한 경우 건너뜀
 
-    df_result = spark.createDataFrame(results, schema)
-    df_result.show(truncate=False)
+            df_result = pd.DataFrame([result])
+            out_path = f"{output_path}{tid}.parquet"
+            df_result.to_parquet(out_path, index=False)
 
-    try:
-        df_result.write.mode("overwrite").save("gs://stundrg-bucket/data/audio_features/")
-        print(f"✅ 저장 완료!", flush=True)
-    except Exception as e:
-        print(f"❌ 저장 실패: {e}", flush=True)
+            print(f"✅ 저장 완료: {out_path}")
+        except Exception as e:
+            print(f"❌ {tid} 처리 중 예외 발생: {e}")
+            traceback.print_exc()
+            continue
 
-    print(f"⏱️ 전체 소요 시간: {datetime.now()}")
+    print(f"🎉 모든 작업 완료! 저장 경로: {output_path}")
