@@ -8,7 +8,5 @@ cd /home/wsl/code/WeatherTunes
 source .venv/bin/activate
 
 $SPARK_HOME/bin/spark-submit \
-  --master spark://spark-1.asia-northeast3-c.c.cool-artwork-455400-v4.internal:7077 \
-  --executor-memory 6G \
-  --executor-cores 4 \
+  --master local[*] \
   $PY_PATH $DS

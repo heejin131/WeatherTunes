@@ -129,7 +129,9 @@ if __name__ == "__main__":
         except AnalysisException:
             print("ℹ️ 이전 저장 데이터 없음. 전체 수집 진행", flush=True)
 
-        track_ids = [row.track_id for row in today_ids_df.collect()]
+        # track_ids = [row.track_id for row in today_ids_df.collect()]
+        track_ids = [row.track_id for row in today_ids_df.collect()[:5]]  # 🔹 테스트용 5개만
+
     except Exception as e:
         print(f"❌ Parquet 로드 실패: {e}", flush=True)
         sys.exit(1)
@@ -141,7 +143,7 @@ if __name__ == "__main__":
     print(f"\n🚀 총 {len(track_ids)}개 track_id 추출 시작", flush=True)
 
     results = [
-        (*scrape_track_data_with_retry(tid), ds)
+        scrape_track_data_with_retry(tid)
         for tid in track_ids
     ]
 
@@ -150,14 +152,13 @@ if __name__ == "__main__":
         StructField("BPM", IntegerType(), True),
         StructField("Danceability", IntegerType(), True),
         StructField("Happiness", IntegerType(), True),
-        StructField("dt", StringType(), True),
     ])
 
     df_result = spark.createDataFrame(results, schema)
     df_result.show(truncate=False)
 
     try:
-        df_result.write.mode("overwrite").partitionBy("dt").save("gs://stundrg-bucket/data/audio_features/")
+        df_result.write.mode("overwrite").save("gs://stundrg-bucket/data/audio_features/")
         print(f"✅ 저장 완료!", flush=True)
     except Exception as e:
         print(f"❌ 저장 실패: {e}", flush=True)

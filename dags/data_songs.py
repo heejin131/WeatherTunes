@@ -10,35 +10,27 @@ default_args = {
 }
 
 with DAG(
-    dag_id="data_songs",
+    dag_id="extract_audio_features_local",
     default_args=default_args,
     start_date=datetime(2023, 1, 2),
     end_date=datetime(2025, 4, 2),
     schedule_interval="@daily",
     catchup=True,
     tags=["weathertunes", "audio"],
-    max_active_runs=1, 
+    max_active_runs=1,
     max_active_tasks=1,
 ) as dag:
 
     start = EmptyOperator(task_id="start")
 
-    process_songs_data = BashOperator(
-        task_id="process_songs_data",
-        bash_command="""
-            ssh -i ~/.ssh/gcp-hyun-key wsl@34.64.195.187 \
-            "/home/wsl/code/WeatherTunes/features/data_songs/run.sh {{ ds }} /home/wsl/code/WeatherTunes/features/data_songs/b.py"
-        """
-    )
-
     extract_audio_features = BashOperator(
         task_id="extract_audio_features",
         bash_command="""
-            ssh -i ~/.ssh/gcp-hyun-key wsl@34.64.195.187 \
-            "/home/wsl/code/WeatherTunes/features/data_songs/run.sh {{ ds }} /home/wsl/code/WeatherTunes/features/data_songs/a.py"
+            cd /home/wsl/code/WeatherTunes/features/data_songs && \
+            /home/wsl/.pyenv/versions/weathertunes-3.12/bin/python a.py {{ ds }}
         """
     )
 
     end = EmptyOperator(task_id="end")
 
-    start >> process_songs_data  >> extract_audio_features >> end                                                                       
+    start >> extract_audio_features >> end
