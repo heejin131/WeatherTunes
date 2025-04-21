@@ -57,7 +57,7 @@ def get_codes(text_data: str):
     
     return weather_code, temp_code
 
-def load_weather_now(save_path: str, ds: str):
+def load_weather_now(ds: str):
     ds_nodash = ds.replace("-", "")
     auth_key = os.getenv("WEATHER_API_KEY")
     if not auth_key:
