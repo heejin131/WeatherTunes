@@ -29,7 +29,9 @@ def convert_to_parquet(raw_data_path: str, save_path: str, dt: str):
     cols = ["SD_DAY", "SD_HR3", "RN", "RN_DAY", "CA_TOT", "TA"]
     
     # Spark 세션 시작
-    spark = SparkSession.builder.appName(f"process_weather_data_{dt}").getOrCreate()
+    spark = SparkSession.builder.appName(f"process_weather_data_{dt}") \
+            .config("spark.sql.sources.partitionOverwriteMode", "dynamic") \
+            .getOrCreate()
     
     # csv에서 데이터 로드
     df = spark.read.option("header", "true").csv(raw_data_path)
