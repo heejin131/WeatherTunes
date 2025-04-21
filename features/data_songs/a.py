@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
     ds = sys.argv[1]
     ds_nodash = ds.replace("-", "")
-    parquet_path = f"gs://jacob_weathertunes/data/songs_top200/dt={ds}/*.parquet"
+    parquet_path = f"gs://jacob_weathertunes/data/songs_top200/dt={ds_nodash}/*.parquet"
     output_path = f"gs://stundrg-bucket/data/audio_features/"
 
     spark = SparkSession.builder \
