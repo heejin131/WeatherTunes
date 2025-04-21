@@ -11,12 +11,21 @@ import undetected_chromedriver as uc
 import time, random
 import multiprocessing as mp
 from datetime import datetime
+import psutil
 
 def to_int_safe(value):
     try:
         return int(value)
     except:
         return None
+
+def kill_child_processes(pid):
+    try:
+        parent = psutil.Process(pid)
+        for child in parent.children(recursive=True):
+            child.kill()
+    except Exception as e:
+        print(f"❌ 하위 프로세스 종료 실패: {e}")
 
 def scrape_track_data(track_id):
     url = f"https://tunebat.com/Info/track/{track_id}"
@@ -75,8 +84,13 @@ def scrape_track_data(track_id):
         }
 
     finally:
-        driver.quit()
-        time.sleep(random.uniform(4, 7))
+        try:
+            driver.quit()
+            driver.service.stop()
+        except:
+            pass
+        kill_child_processes(os.getpid())
+        time.sleep(random.uniform(3, 5))
 
 def worker(track_id, return_dict):
     try:
