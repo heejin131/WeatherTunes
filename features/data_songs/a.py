@@ -5,7 +5,7 @@ import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium_stealth import stealth  # ✅ 추가
+from selenium_stealth import stealth
 from datetime import datetime
 import time, random, sys
 import os
@@ -20,8 +20,6 @@ def scrape_track_data(track_id):
     url = f"https://tunebat.com/Info/track/{track_id}"
     options = uc.ChromeOptions()
     options.add_argument("--headless=new")
-
-    # ✅ 봇 탐지 우회 설정
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-blink-features=AutomationControlled")
@@ -29,7 +27,7 @@ def scrape_track_data(track_id):
     options.binary_location = "/usr/bin/google-chrome"
 
     driver = uc.Chrome(options=options, use_subprocess=False)
-    
+
     stealth(driver,
         languages=["en-US", "en"],
         vendor="Google Inc.",
@@ -39,40 +37,44 @@ def scrape_track_data(track_id):
         fix_hairline=True,
     )
 
-    
-
     try:
         driver.get(url)
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-
-        # 💡 랜덤 대기 (Cloudflare 챌린지 회피)
         sleep_initial = round(random.uniform(2.5, 5.5), 2)
         print(f"⏳ 페이지 로딩 후 {sleep_initial}초 대기...")
         time.sleep(sleep_initial)
 
         def get_metric(label):
             try:
+                print(f"🔍 [{track_id}] {label} 추출 시도 중...")
+
                 if label == "BPM":
                     el = WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located((By.XPATH, f"//span[text()='{label}']/preceding-sibling::h3"))
                     )
-                    return el.text
+                    value = el.text
                 else:
                     wrapper = WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located((By.XPATH, f"//span[translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='{label.lower()}']/ancestor::div[contains(@class, '_1MCwQ')]"))
                     )
                     value_el = wrapper.find_element(By.CLASS_NAME, "ant-progress-text")
-                    return value_el.get_attribute("title")
+                    value = value_el.get_attribute("title")
+
+                print(f"✅ [{track_id}] {label}: {value}")
+                return value
             except Exception as e:
-                print(f"❗ {label} 추출 실패: {e}")
+                print(f"❌ [{track_id}] {label} 추출 실패: {e}")
                 return "N/A"
 
-        print(f"🎧 {track_id} 추출 완료")
-        return (track_id, 
-                to_int_safe(get_metric("BPM")),
-                to_int_safe(get_metric("Danceability")),
-                to_int_safe(get_metric("Happiness"))
-                )
+        result = (
+            track_id,
+            to_int_safe(get_metric("BPM")),
+            to_int_safe(get_metric("Danceability")),
+            to_int_safe(get_metric("Happiness"))
+        )
+
+        print(f"📦 최종 결과: {result}")
+        return result
 
     finally:
         driver.quit()
@@ -85,11 +87,15 @@ if __name__ == "__main__":
         print("❌ 날짜 인자 필요: python a.py YYYY-MM-DD")
         sys.exit(1)
 
-    ds_nodash =  sys.argv[1].replace("-", "")
-    parquet_path = f"gs://jacob_weathertunes/data/songs_data/dt={ds_nodash}/*.parquet"
+    ds = sys.argv[1]
+    ds_nodash = ds.replace("-", "")
+    parquet_path = f"gs://jacob_weathertunes/data/songs_raw/dt={ds}/*.parquet"
     output_path = f"gs://stundrg-bucket/data/audio_features/"
 
-    spark = SparkSession.builder.appName("AudioFeatures").getOrCreate()
+    spark = SparkSession.builder \
+        .appName("AudioFeatures") \
+        .config("spark.sql.sources.partitionOverwriteMode", "dynamic") \
+        .getOrCreate()
 
     try:
         df_input = spark.read.parquet(parquet_path)
@@ -106,17 +112,17 @@ if __name__ == "__main__":
     print(f"🚀 총 {len(track_ids)}개 트랙 크롤링 시작")
 
     results = [
-    (*scrape_track_data(tid), ds_nodash)
-    for tid in track_ids
-]
+        (*scrape_track_data(tid), ds_nodash)
+        for tid in track_ids
+    ]
 
     schema = StructType([
-    StructField("track_id", StringType(), True),
-    StructField("BPM", IntegerType(), True),
-    StructField("Danceability", IntegerType(), True),
-    StructField("Happiness", IntegerType(), True),
-    StructField("dt", StringType(), True),
-])
+        StructField("track_id", StringType(), True),
+        StructField("BPM", IntegerType(), True),
+        StructField("Danceability", IntegerType(), True),
+        StructField("Happiness", IntegerType(), True),
+        StructField("dt", StringType(), True),
+    ])
 
     df_result = spark.createDataFrame(results, schema)
 
@@ -126,4 +132,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ Parquet 저장 실패: {e}")
 
-        print(f"⏱️ 소요 시간: {datetime.now() - start_time}")
+    print(f"⏱️ 소요 시간: {datetime.now() - start_time}")
