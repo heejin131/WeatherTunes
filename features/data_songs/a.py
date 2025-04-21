@@ -1,14 +1,13 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType
-
-import undetected_chromedriver as uc
+from selenium_stealth import stealth
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium_stealth import stealth
-from datetime import datetime
-import time, random, sys
-import os
+
+import undetected_chromedriver as uc
+from datetime import datetime, timedelta
+import time, random, sys, os
 
 def to_int_safe(value):
     try:
@@ -113,10 +112,25 @@ if __name__ == "__main__":
         .getOrCreate()
 
     try:
-        df_input = spark.read.parquet(parquet_path)
-        track_ids = [row.track_id for row in df_input.select("track_id").dropna().distinct().collect()]
+        # 현재 날짜 기준 track_id
+        df_today = spark.read.parquet(parquet_path)
+        today_ids_df = df_today.select("track_id").dropna().distinct()
+
+        # 전날 중복 track_id 제거 시도
+        prev_day = (datetime.strptime(ds, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y%m%d")
+        prev_path = f"{output_path}/dt={prev_day}/*.parquet"
+
+        try:
+            df_prev = spark.read.parquet(prev_path)
+            prev_ids_df = df_prev.select("track_id").dropna().distinct()
+            today_ids_df = today_ids_df.join(prev_ids_df, on="track_id", how="left_anti")
+            print(f"✅ 중복 제거 후 track_id 수: {today_ids_df.count()}")
+        except:
+            print("ℹ️ 전날 parquet 파일 없음, 전체 사용")
+
+        track_ids = [row.track_id for row in today_ids_df.collect()]
     except Exception as e:
-        print(f"❌ CSV 로드 실패: {e}")
+        print(f"❌ Parquet 로드 실패: {e}")
         sys.exit(1)
 
     if not track_ids:
