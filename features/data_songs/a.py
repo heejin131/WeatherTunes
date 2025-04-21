@@ -60,7 +60,7 @@ def scrape_track_data(track_id):
                     value_el = wrapper.find_element(By.CLASS_NAME, "ant-progress-text")
                     value = value_el.get_attribute("title")
 
-                print(f"✅ [{track_id}] {label}: {value}")
+                print(f"✅ [{track_id}] {label} 원본값: {value} → 정수 변환: {to_int_safe(value)}")
                 return value
             except Exception as e:
                 print(f"❌ [{track_id}] {label} 추출 실패: {e}")
