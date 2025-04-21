@@ -5,9 +5,16 @@ import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium_stealth import stealth  # ✅ 추가
 from datetime import datetime
 import time, random, sys
 import os
+
+def to_int_safe(value):
+    try:
+        return int(value)
+    except:
+        return None
 
 def scrape_track_data(track_id):
     url = f"https://tunebat.com/Info/track/{track_id}"
@@ -19,10 +26,20 @@ def scrape_track_data(track_id):
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-    # ✅ 크롬 실행 경로 (인스턴스 VM 기준)
     options.binary_location = "/usr/bin/google-chrome"
 
     driver = uc.Chrome(options=options, use_subprocess=False)
+    
+    stealth(driver,
+        languages=["en-US", "en"],
+        vendor="Google Inc.",
+        platform="Win32",
+        webgl_vendor="Intel Inc.",
+        renderer="Intel Iris OpenGL Engine",
+        fix_hairline=True,
+    )
+
+    
 
     try:
         driver.get(url)
@@ -51,7 +68,11 @@ def scrape_track_data(track_id):
                 return "N/A"
 
         print(f"🎧 {track_id} 추출 완료")
-        return (track_id, get_metric("BPM"), get_metric("Danceability"), get_metric("Happiness"))
+        return (track_id, 
+                to_int_safe(get_metric("BPM")),
+                to_int_safe(get_metric("Danceability")),
+                to_int_safe(get_metric("Happiness"))
+                )
 
     finally:
         driver.quit()
@@ -85,7 +106,7 @@ if __name__ == "__main__":
     print(f"🚀 총 {len(track_ids)}개 트랙 크롤링 시작")
 
     results = [
-    (tid, scrape_track_data(tid), ds_nodash)
+    (*scrape_track_data(tid), ds_nodash)
     for tid in track_ids
 ]
 
