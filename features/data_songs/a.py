@@ -9,6 +9,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium_stealth import stealth
 import undetected_chromedriver as uc
 import time, random
+import multiprocessing as mp
+from datetime import datetime
 
 def to_int_safe(value):
     try:
@@ -76,8 +78,6 @@ def scrape_track_data(track_id):
         driver.quit()
         time.sleep(random.uniform(4, 7))
 
-import multiprocessing as mp
-
 def worker(track_id, return_dict):
     try:
         result = scrape_track_data(track_id)
@@ -103,7 +103,6 @@ def run_with_timeout(track_id, timeout=30):
         print(f"❌ {track_id} 오류 발생: {return_dict.get('error')}")
         return None
 
-
 def get_latest_partition(bucket_path):
     fs = gcsfs.GCSFileSystem()
     try:
@@ -115,12 +114,10 @@ def get_latest_partition(bucket_path):
         print(f"❌ GCS 파티션 목록 조회 실패: {e}")
         return None
 
-
 if __name__ == "__main__":
     input_base = "gs://jacob_weathertunes/data/songs_top200/"
-    output_path = "gs://stundrg-bucket/data/audio_features/"
+    output_path = "gs://jacob_weathertunes/data/audio_features/"
 
-    # ✅ 날짜 인자 받기
     if len(sys.argv) == 2:
         target_date = sys.argv[1]
         print(f"📦 입력 날짜 인자: {target_date}")
@@ -149,22 +146,45 @@ if __name__ == "__main__":
 
     print(f"🚀 총 {len(track_ids)}개 트랙 수집 시작")
 
+    fs = gcsfs.GCSFileSystem()
+    failures = []
+
     for i, tid in enumerate(track_ids):
         try:
+            out_path = f"{output_path}{tid}.parquet"
+
+            if fs.exists(out_path):
+                print(f"⏭️ {tid} 이미 저장됨, 건너뜀")
+                continue
+
             print(f"[{i+1}/{len(track_ids)}] 🎵 {tid} 크롤링 중...")
 
             result = run_with_timeout(tid, timeout=30)
             if result is None:
-                continue  # 실패한 경우 건너뜀
+                failures.append((tid, target_date))
+                continue
 
             df_result = pd.DataFrame([result])
-            out_path = f"{output_path}{tid}.parquet"
             df_result.to_parquet(out_path, index=False)
 
             print(f"✅ 저장 완료: {out_path}")
+
         except Exception as e:
             print(f"❌ {tid} 처리 중 예외 발생: {e}")
             traceback.print_exc()
+            failures.append((tid, target_date))
             continue
 
-    print(f"🎉 모든 작업 완료! 저장 경로: {output_path}")
+    print(f"\n🎉 모든 작업 완료! 저장 경로: {output_path}")
+
+    if failures:
+        print("\n📋 실패한 track_id 목록:")
+        for tid, _ in failures:
+            print("-", tid)
+
+        mode = "a" if os.path.exists("failures.csv") else "w"
+        header = not os.path.exists("failures.csv")
+        pd.DataFrame(failures, columns=["track_id", "date"]).to_csv("failures.csv", index=False, mode=mode, header=header)
+        print("📝 실패 목록을 failures.csv 로 저장했습니다.")
+    else:
+        print("✅ 모든 track_id 성공적으로 처리되었습니다.")
