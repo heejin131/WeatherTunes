@@ -2,38 +2,36 @@ from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
-import sys
-import os
 
-# 💡 scripts 디렉토리 경로 추가
-sys.path.append(os.path.join(os.path.dirname(__file__), "../script"))
-from app import generate_meta_profile
-
-default_args = {
-    "owner": "airflow",
-    "start_date": datetime(2025, 4, 13),
-    "end_date": datetime(2025, 4, 16),
-    "retries": 1,
-    "retry_delay": timedelta(minutes=2),
-}
+DAG_ID = "meta"
 
 with DAG(
-    dag_id="dag_generate_meta_profile",
-    default_args=default_args,
-    schedule_interval="0 2 * * *",
+    DAG_ID,
+    default_args={
+        "depends_on_past": True,
+        "retries": 1,
+        "retry_delay": timedelta(seconds=3)
+    },
+    description="Processing weather data",
+    schedule="@daily",
+    start_date=datetime(2023, 1, 1),
+    end_date=datetime(2025, 4, 2),
     catchup=True,
-    tags=["meta", "profile"]
+    max_active_runs=1,
+    tags=["spark", "submit", "meta"],
 ) as dag:
 
     start = EmptyOperator(task_id="start")
+    end = EmptyOperator(task_id="end")
 
-    # 🧪 Spark 함수로 meta profile 생성 후 GCS 저장
-
-    generate = BashOperator(
-        task_id="generate_meta_profile",
+    create_meta = BashOperator(
+        task_id="create_meta",
+        # bash_command=""" # -> 인스턴스용
+        #     ssh -i ~/.ssh/gcp-joon-key joon@34.47.101.222 \
+        #     "/home/joon/code/WeatherTunes/features/meta/run.sh {{ ds_nodash }} /home/joon/code/WeatherTunes/features/meta/a.py"
+        # """
         bash_command="""
-        spark-submit \
-        /home/gmlwls5168/airflow/script/app.py {{ ds_nodash }}
+            "/Users/joon/swcamp4/code/WeatherTunes/features/meta/run.sh {{ ds_nodash }} /Users/joon/swcamp4/code/WeatherTunes/features/meta/a.py"
         """
     )
 
@@ -44,12 +42,10 @@ with DAG(
         bq load \
         --source_format=PARQUET \
         --autodetect \
-        --replace \
-        praxis-zoo-455400-d2:meta_dataset.meta_profile \
-        gs://nijin-bucket/meta/meta_profile/{{ ds_nodash }}/weather_main=0/temp_band=1/*.parquet
+        --append \
+        weathertunes:meta.meta \
+        gs://jacob_weathertunes/meta/dt={{ ds_nodash }}/*.parquet
         """
     )
 
-    end = EmptyOperator(task_id="end")
-
-    start >> generate >> copy_to_bigquery >> end
+    start >> create_meta >> copy_to_bigquery >> end
