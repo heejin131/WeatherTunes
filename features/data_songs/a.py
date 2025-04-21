@@ -71,7 +71,7 @@ def scrape_track_data(track_id):
             "track_id": track_id,
             "BPM": to_int_safe(get_metric("BPM")),
             "Danceability": to_int_safe(get_metric("Danceability")),
-            "Happiness": to_int_safe(get_metric("Happiness")),
+            "Happiness": to_int_safe(get_metric("Happiness"))
         }
 
     finally:
