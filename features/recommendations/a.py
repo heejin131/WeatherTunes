@@ -52,8 +52,14 @@ def get_codes(text_data: str):
     df.columns = names
     df.replace(["-9", -9, "-9.0", -9.0, "-"], value=pd.NA, inplace=True)
     
-    weather_code = create_weather_code(df["SD_DAY"], df["SD_HR3"], df["RN"], df["RN_DAY"], df["CA_TOT"])
-    temp_code = create_temp_code(df["TA"])
+    weather_code = create_weather_code(
+            df["SD_DAY"].item(),
+            df["SD_HR3"].item(),
+            df["RN"].item(),
+            df["RN_DAY"].item(),
+            df["CA_TOT"].item()
+    )
+    temp_code = create_temp_code(df["TA"].item())
     
     return weather_code, temp_code
 
