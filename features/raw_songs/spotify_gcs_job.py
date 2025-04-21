@@ -12,7 +12,7 @@ from google.cloud import storage
 
 # 설정
 SPOTIFY_EMAIL = "jacob8753@gmail.com"
-SPOTIFY_PASSWORD = "!Jacob0503"
+SPOTIFY_PASSWORD = "Password"
 DOWNLOAD_DIR = "/home/jacob8753/temp/spotify_charts/"
 GCS_BUCKET = "jacob_weathertunes"
 GCS_PREFIX = "raw/songs_raw"
