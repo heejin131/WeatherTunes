@@ -17,6 +17,8 @@ def merge_data(weather_path: str, songs_path: str, audio_features_path: str, sav
     audio_features_df = spark.read.parquet(audio_features_path)
     
     merged_song_df = songs_df.join(broadcast(audio_features_df), on="track_id", how="left")
+    merged_song_df = merged_song_df.withColumn("dt", lit(dt))
+
     result_df = merged_song_df.join(weather_df, on="dt", how="left")
     result_df = result_df.withColumn("dt", lit(dt))
     
