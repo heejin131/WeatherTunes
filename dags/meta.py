@@ -15,7 +15,7 @@ with DAG(
     description="Processing weather data",
     schedule="@daily",
     start_date=datetime(2023, 1, 1),
-    end_date=datetime(2025, 4, 2),
+    end_date=datetime(2024, 6, 1),
     catchup=True,
     max_active_runs=1,
     tags=["spark", "submit", "meta"],
@@ -26,12 +26,9 @@ with DAG(
 
     create_meta = BashOperator(
         task_id="create_meta",
-        # bash_command=""" # -> 인스턴스용
-        #     ssh -i ~/.ssh/gcp-joon-key joon@34.47.101.222 \
-        #     "/home/joon/code/WeatherTunes/features/meta/run.sh {{ ds_nodash }} /home/joon/code/WeatherTunes/features/meta/a.py"
-        # """
-        bash_command="""
-            "/Users/joon/swcamp4/code/WeatherTunes/features/meta/run.sh {{ ds_nodash }} /Users/joon/swcamp4/code/WeatherTunes/features/meta/a.py"
+        bash_command=""" # -> 인스턴스용
+            ssh -i ~/.ssh/gcp-joon-key joon@34.47.101.222 \
+            "/home/joon/code/WeatherTunes/features/meta/run.sh {{ ds_nodash }} /home/joon/code/WeatherTunes/features/meta/a.py"
         """
     )
 
