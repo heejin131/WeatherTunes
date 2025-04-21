@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# SPARK_HOME=/home/joon/app/spark-3.5.1-bin-hadoop3
+SPARK_HOME=/home/joon/app/spark-3.5.1-bin-hadoop3
 DS_NODASH=$1
 PY_PATH=$2
 
