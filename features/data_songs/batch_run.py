@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import subprocess
 
 start_date = datetime.strptime("2023-05-12", "%Y-%m-%d")
-end_date = datetime.strptime("2023-05-31", "%Y-%m-%d")
+end_date = datetime.strptime("2024-05-31", "%Y-%m-%d")
 
 while start_date <= end_date:
     ds = start_date.strftime("%Y%m%d")
