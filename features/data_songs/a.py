@@ -23,6 +23,12 @@ def scrape_track_data(track_id):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--no-first-run")
+    options.add_argument("--no-default-browser-check")
+    options.add_argument("--disable-background-networking")
+    options.add_argument("--disable-sync")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     options.binary_location = "/usr/bin/google-chrome"
 
@@ -41,7 +47,7 @@ def scrape_track_data(track_id):
         driver.get(url)
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
         sleep_initial = round(random.uniform(2.5, 5.5), 2)
-        print(f"⏳ 페이지 로딩 후 {sleep_initial}초 대기...")
+        print(f"\n⏳ 페이지 로딩 후 {sleep_initial}초 대기...")
         time.sleep(sleep_initial)
 
         def get_metric(label):
@@ -82,6 +88,15 @@ def scrape_track_data(track_id):
         print(f"🛌 {sleep_after}초 휴식 중 (봇 방지)")
         time.sleep(sleep_after)
 
+def scrape_track_data_with_retry(track_id, retries=2):
+    for attempt in range(1, retries + 2):
+        try:
+            return scrape_track_data(track_id)
+        except Exception as e:
+            print(f"⚠️ {track_id} 재시도 {attempt}/{retries + 1}: {e}")
+            time.sleep(random.uniform(2, 4))
+    return (track_id, None, None, None)
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("❌ 날짜 인자 필요: python a.py YYYY-MM-DD")
@@ -89,7 +104,7 @@ if __name__ == "__main__":
 
     ds = sys.argv[1]
     ds_nodash = ds.replace("-", "")
-    parquet_path = f"gs://jacob_weathertunes/data/songs_top200/dt={ds_nodash}/*.parquet"
+    parquet_path = f"gs://jacob_weathertunes/data/songs_raw/dt={ds}/*.parquet"
     output_path = f"gs://stundrg-bucket/data/audio_features/"
 
     spark = SparkSession.builder \
@@ -112,7 +127,7 @@ if __name__ == "__main__":
     print(f"🚀 총 {len(track_ids)}개 트랙 크롤링 시작")
 
     results = [
-        (*scrape_track_data(tid), ds_nodash)
+        (*scrape_track_data_with_retry(tid), ds_nodash)
         for tid in track_ids
     ]
 
