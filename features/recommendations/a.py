@@ -9,11 +9,11 @@ load_dotenv()
 BASE_PATH = "gs://jacob_weathertunes"
 
 def create_weather_code(sd_day, sd_hr3, rn, rn_day, ca_tot) -> int:
-    if (sd_day is not None and sd_day > 0) or (sd_hr3 is not None and sd_hr3 > 0):
+    if (pd.notna(sd_day) and sd_day > 0) or (pd.notna(sd_hr3) and sd_hr3 > 0):
         return 3  # 눈
-    elif (rn is not None and rn > 0) or (rn_day is not None and rn_day > 0):
+    elif (pd.notna(rn_day) and rn > 0) or (pd.notna(rn_day) and rn_day > 0):
         return 2  # 비
-    elif ca_tot is not None and ca_tot >= 5:
+    elif pd.notna(ca_tot) and ca_tot >= 5:
         return 1  # 흐림
     return 0      # 맑음
 
