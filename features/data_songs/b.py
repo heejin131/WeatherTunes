@@ -5,8 +5,7 @@ from pyspark.sql.functions import regexp_extract, col, lit
 def convert_to_parquet(raw_data_path: str, save_path: str, dt: str):
     spark = SparkSession.builder.appName(f"save_song_data_{dt}").getOrCreate()
     
-    df = spark.read.option("header", "true").csv(raw_data_path)
-    df = df.withColumn("track_id", regexp_extract("uri", r"track:([a-zA-Z0-9]+)", 1))
+    df = spark.read.parquet("header", "true").csv(raw_data_path)
     df = df.select(
         "track_id",
         "artist_names",

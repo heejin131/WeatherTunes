@@ -7,8 +7,9 @@ PY_PATH=$2
 cd /home/wsl/code/WeatherTunes
 source .venv/bin/activate
 
+SCRIPT_PATH=$(realpath $PY_PATH)
+
 $SPARK_HOME/bin/spark-submit \
-  --master spark://spark-1.asia-northeast3-c.c.cool-artwork-455400-v4.internal:7077 \
-  --executor-memory 6G \
-  --executor-cores 4 \
-  $PY_PATH $DS
+  --master local[*] \
+  --conf spark.ui.port=8899 \
+  $SCRIPT_PATH $DS
