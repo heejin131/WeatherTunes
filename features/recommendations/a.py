@@ -83,7 +83,9 @@ def load_weather_now(ds: str):
         print(response.text)
 
 def recommend_tracks(meta_path: str, songs_path: str, audio_features_path: str, save_path: str, weather_code: str, temp_code: str, ds: str):
-    spark = SparkSession.builder.appName("recommend_tracks")
+    spark = SparkSession.builder.appName(f"recommend_tracks_{ds}") \
+            .config("spark.sql.sources.partitionOverwriteMode", "dynamic") \
+            .getOrCreate()
     
     meta_df = spark.read.parquet(meta_path) \
         .select("BPM", "danceability", "happiness")
