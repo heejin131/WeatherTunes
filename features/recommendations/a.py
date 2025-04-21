@@ -1,6 +1,7 @@
 import sys
 import os
 import requests
+import pandas as pd
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, lit, pow, abs, avg
@@ -31,7 +32,6 @@ def create_temp_code(ta) -> int:
     return 5
 
 def get_codes(text_data: str):
-    import pandas as pd
     from io import StringIO
     
     lines = text_data.splitlines()
