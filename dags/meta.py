@@ -39,7 +39,6 @@ with DAG(
         bq load \
         --source_format=PARQUET \
         --autodetect \
-        --append \
         weathertunes:meta.meta \
         gs://jacob_weathertunes/meta/dt={{ ds_nodash }}/*.parquet
         """
