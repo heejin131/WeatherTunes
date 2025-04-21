@@ -8,13 +8,12 @@ DAG_ID = "data_weather"
 with DAG(
     DAG_ID,
     default_args={
-        "depends_on_past": True,
         "retries": 1,
         "retry_delay": timedelta(seconds=3)
     },
     description="Processing weather data",
     schedule="@daily",
-    start_date=datetime(2023, 1, 1),
+    start_date=datetime(2023, 2, 28),
     end_date=datetime(2025, 4, 2),
     catchup=True,
     max_active_runs=1,
@@ -27,7 +26,7 @@ with DAG(
     process_weather_data = BashOperator(
         task_id="process_weather_data",
         bash_command="""
-            ssh -i ~/.ssh/gcp-joon-key joon@34.22.105.106 \
+            ssh -i ~/.ssh/gcp-joon-key joon@34.47.101.222 \
             "/home/joon/code/WeatherTunes/features/data_weather/run.sh {{ ds_nodash }} /home/joon/code/WeatherTunes/features/data_weather/a.py"
         """
     )
