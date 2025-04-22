@@ -1,3 +1,4 @@
+import sys
 import os
 import requests, json
 from dotenv import load_dotenv
@@ -23,10 +24,11 @@ def display_msg(data, ds: str):
     
     return msg + "### 💬 내일도 당신의 하루에 맞는 음악을 준비할게요!"
 
-def send_noti(ds_nodash: str):
+def send_noti(ds: str):
     WEBHOOK_ID = os.getenv('DISCORD_WEBHOOK_ID')
     WEBHOOK_TOKEN = os.getenv('DISCORD_WEBHOOK_TOKEN')
     WEBHOOK_URL = f"https://discordapp.com/api/webhooks/{WEBHOOK_ID}/{WEBHOOK_TOKEN}"
+    ds_nodash = ds.replace("-", "")
     
     gcs_path = f"gs://jacob_weathertunes/tmp/recommend_{ds_nodash}.json"
     local_path = f"/home/joon/temp/recommend/recommend_{ds_nodash}.json"
@@ -49,6 +51,5 @@ def send_noti(ds_nodash: str):
 
 if __name__ == "__main__":
     ds = sys.argv[1]
-    ds_nodash = ds.replace("-", "")
 
-    send_noti(ds_nodash)
+    send_noti(ds)
