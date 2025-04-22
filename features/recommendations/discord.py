@@ -7,7 +7,7 @@ load_dotenv()
 
 def display_msg(data, ds: str):
     songs = [(track["track_id"], track["artist_names"], track["track_name"]) for i, track in enumerate(data)]
-    msg = """
+    msg = f"""
     # 🎧 오늘의 감성 음악 추천 도착!  
 
     ### 📆 날짜: {ds}
