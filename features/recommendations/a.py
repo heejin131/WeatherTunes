@@ -82,10 +82,10 @@ def load_weather_now(ds: str):
         print(f"❌ 요청 실패! 상태코드: {response.status_code}")
         print(response.text)
 
-def recommend_random_tracks(songs_path: str, save_path: str):
+def recommend_random_tracks(track_info_path: str, save_path: str):
     print("⚠️ 해당 조건의 메타데이터 없음. 랜덤 추천으로 대체합니다.")
 
-    songs_df = spark.read.parquet(songs_path) \
+    songs_df = spark.read.parquet(track_info_path) \
         .select("track_id", "artist_names", "track_name") \
         .dropDuplicates(["track_id"])
 
@@ -96,7 +96,7 @@ def recommend_random_tracks(songs_path: str, save_path: str):
 
     print(f"✅ 랜덤 추천 결과를 {save_path}에 저장 완료")
 
-def recommend_tracks(meta_path: str, songs_path: str, audio_features_path: str, save_path: str, weather_code: str, temp_code: str, ds: str):
+def recommend_tracks(meta_path: str, track_info_path: str, audio_features_path: str, save_path: str, weather_code: str, temp_code: str, ds: str):
     spark = SparkSession.builder.appName(f"recommend_tracks_{ds}") \
             .config("spark.sql.sources.partitionOverwriteMode", "dynamic") \
             .getOrCreate()
@@ -105,7 +105,7 @@ def recommend_tracks(meta_path: str, songs_path: str, audio_features_path: str, 
         .select("BPM", "danceability", "happiness")
 
     if meta_df.rdd.isEmpty():
-        recommend_random_tracks(songs_path, save_path)
+        recommend_random_tracks(track_info_path, save_path)
         return
 
     avg_df = meta_df.agg(
@@ -126,7 +126,7 @@ def recommend_tracks(meta_path: str, songs_path: str, audio_features_path: str, 
     )
     
     top3_df = df_with_distance.orderBy(col("dinstance")).limit(3)
-    songs_df = spark.read.parquet(songs_path) \
+    songs_df = spark.read.parquet(track_info_path) \
         .select("track_id", "artist_names", "track_name") \
         .dropDuplicates(["track_id"])
         
@@ -140,10 +140,10 @@ def recommend_tracks(meta_path: str, songs_path: str, audio_features_path: str, 
 if __name__ == "__main__":
     ds = sys.argv[1]
     weather_code, temp_code = load_weather_now(ds)
-    
-    meta_path = f"{BASE_PATH}/meta/dt=*/weather_code={weather_code}/temp_code={temp_code}/*.parquet"
-    songs_path = f"{BASE_PATH}/raw/songs_raw/"
+
+    meta_path = f"{BASE_PATH}/meta/dt=*/weather_code={weather_code}/temp_code={temp_code}/"
+    track_info_path = f"{BASE_PATH}/meta/"
     audio_features_path = f"{BASE_PATH}/data/audio_features"
     save_path = f"{BASE_PATH}/tmp/recommend_{ds}.json"
     
-    recommend_tracks(meta_path, songs_path, audio_features_path, save_path, weather_code, temp_code, ds)
+    recommend_tracks(meta_path, track_info_path, audio_features_path, save_path, weather_code, temp_code, ds)
