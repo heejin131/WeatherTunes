@@ -132,6 +132,13 @@ def recommend_tracks(meta_path: str, track_info_path: str, audio_features_path: 
         
     result_df = top3_df.join(songs_df, on="track_id", how="left") \
         .select("track_id", "artist_names", "track_name")
+
+    print("-----top3_df-----")
+    top3_df.show()
+    print("-----songs_df-----")
+    songs_df.show()
+    print("-----result_df-----")
+    result_df.show()
     
     result_df.toPandas().to_json(save_path, orient="records", force_ascii=False)
     
