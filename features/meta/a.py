@@ -1,6 +1,6 @@
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+from pyspark.sql.types import StructType, StructField, StringType, LongType, IntegerType
 from pyspark.sql.functions import lit, broadcast, col
 
 def merge_data(weather_path: str, songs_path: str, audio_features_path: str, save_path: str, dt: str):
@@ -10,7 +10,7 @@ def merge_data(weather_path: str, songs_path: str, audio_features_path: str, sav
 
     audio_features_schema = StructType([
         StructField("track_id", StringType(), True),
-        StructField("BPM", IntegerType(), True),
+        StructField("BPM", LongType(), True),
         StructField("danceability", IntegerType(), True),
         StructField("happiness", IntegerType(), True)
     ])
@@ -24,6 +24,7 @@ def merge_data(weather_path: str, songs_path: str, audio_features_path: str, sav
 
     audio_features_df = spark.read.schema(audio_features_schema) \
             .parquet(audio_features_path)
+    audio_features_df = audio_features_df.withColumn("BPM", col("BPM").cast("int"))
     
     merged_song_df = songs_df.join(broadcast(audio_features_df), on="track_id", how="left")
     merged_song_df = merged_song_df.withColumn("dt", lit(dt))
