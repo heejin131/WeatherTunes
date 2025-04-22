@@ -22,7 +22,7 @@ def display_msg(data, ds: str):
 
         """    
     
-    return msg + "### 💬 내일도 당신의 하루에 맞는 음악을 준비할게요!"
+    return msg + "\n### 💬 내일도 당신의 하루에 맞는 음악을 준비할게요!"
 
 def send_noti(ds: str):
     WEBHOOK_ID = os.getenv('DISCORD_WEBHOOK_ID')
