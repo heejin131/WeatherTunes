@@ -1,6 +1,6 @@
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.types = import LongType
+from pyspark.sql.types import LongType
 from pyspark.sql.functions import lit, broadcast, col
 
 def cast_long_to_int(df):
