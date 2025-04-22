@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, lit, pow, abs, avg
+from pyspark.sql.functions import col, lit, pow, abs, avg, rand
 
 load_dotenv()
 BASE_PATH = "gs://jacob_weathertunes"
@@ -82,6 +82,20 @@ def load_weather_now(ds: str):
         print(f"❌ 요청 실패! 상태코드: {response.status_code}")
         print(response.text)
 
+def recommend_random_tracks(songs_path: str, save_path: str):
+    print("⚠️ 해당 조건의 메타데이터 없음. 랜덤 추천으로 대체합니다.")
+
+    songs_df = spark.read.parquet(songs_path) \
+        .select("track_id", "artist_names", "track_name") \
+        .dropDuplicates(["track_id"])
+
+    df = songs_df.orderBy(rand()).limit(3)
+
+    df.select("artist_names", "track_name") \
+        .to_json(save_path, orient="records", force_ascii=False)
+
+    print(f"✅ 랜덤 추천 결과를 {save_path}에 저장 완료")
+
 def recommend_tracks(meta_path: str, songs_path: str, audio_features_path: str, save_path: str, weather_code: str, temp_code: str, ds: str):
     spark = SparkSession.builder.appName(f"recommend_tracks_{ds}") \
             .config("spark.sql.sources.partitionOverwriteMode", "dynamic") \
@@ -89,6 +103,11 @@ def recommend_tracks(meta_path: str, songs_path: str, audio_features_path: str, 
     
     meta_df = spark.read.parquet(meta_path) \
         .select("BPM", "danceability", "happiness")
+
+    if meta_df.rdd.isEmpty():
+        recommend_random_tracks(songs_path, save_path)
+        return
+
     avg_df = meta_df.agg(
         avg("BPM").alias("BPM"),
         avg("danceability").ailas("danceability"),

@@ -29,7 +29,7 @@ with DAG(
         task_id="load_recommended_songs",
         bash_command="""
             ssh -i ~/.ssh/gcp-joon-key joon@34.47.101.222 \
-            "/home/joon/code/WeatherTunes/features/recommedations/run.sh {{ ds_nodash }} /home/joon/code/WeatherTunes/features/recommedations/a.py"
+            "/home/joon/code/WeatherTunes/features/recommendations/run.sh {{ ds_nodash }} /home/joon/code/WeatherTunes/features/recommendations/a.py"
         """
     )
     
@@ -37,7 +37,7 @@ with DAG(
         task_id="send_notification",
         bash_command="""
             ssh -i ~/.ssh/gcp-joon-key joon@34.47.101.222 \
-            "/home/joon/code/WeatherTunes/features/recommedations/run.sh {{ ds }} /home/joon/code/WeatherTunes/features/recommedations/discord.py"
+            "/home/joon/code/WeatherTunes/features/recommendations/run.sh {{ ds }} /home/joon/code/WeatherTunes/features/recommendations/discord.py"
         """
     )
     
