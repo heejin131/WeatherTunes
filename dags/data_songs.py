@@ -1,34 +1,25 @@
 from airflow import DAG
-from airflow.operators.empty import EmptyOperator
 from airflow.operators.bash import BashOperator
-from datetime import datetime, timedelta
-
-default_args = {
-    "owner": "airflow",
-    "retries": 1,
-    "retry_delay": timedelta(minutes=3),
-}
+from airflow.operators.empty import EmptyOperator
+from datetime import datetime
 
 with DAG(
-    dag_id="data_songs_local",
-    default_args=default_args,
-    start_date=datetime(2023, 1, 2),
-    end_date=datetime(2023, 1, 3),
-    schedule_interval="@daily",
+    dag_id="data_song200_clean",
+    schedule_interval="10 10 * * *",
+    start_date=datetime(2024, 1, 1),
+    end_date=datetime(2025, 4, 3),
+    max_active_runs=3,
     catchup=True,
-    max_active_runs=1,
-    tags=["weathertunes", "audio", "local"],
+    tags=["spark", "spotify","song","cleanse", "gcs"],
 ) as dag:
 
     start = EmptyOperator(task_id="start")
 
-    run_audio_feature_job = BashOperator(
-    task_id="extract_audio_features_local",
-    bash_command="bash /home/wsl/code/WeatherTunes/features/data_songs/run.sh {{ ds_nodash }} features/data_songs/a.py",
-    cmd_timeout=1800,
+    run_spark = BashOperator(
+        task_id="run_spark_job",
+        bash_command="/home/jacob8753/airflow2/dags/scripts/data_song200_run.sh {{ ds }}",
     )
-    
 
     end = EmptyOperator(task_id="end")
 
-    start >> run_audio_feature_job >> end
+    start >> run_spark >> end
