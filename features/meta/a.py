@@ -1,6 +1,13 @@
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import lit, broadcast
+from pyspark.sql.types = import LongType
+from pyspark.sql.functions import lit, broadcast, col
+
+def cast_long_to_int(df):
+    for field in df.schema.fields:
+        if isinstance(field.dataType, LongType):
+            df = df.withColumn(field.name, col(field.name).cast("int"))
+        return df
 
 def merge_data(weather_path: str, songs_path: str, audio_features_path: str, save_path: str, dt: str):
     spark = SparkSession.builder.appName(f"merge_meta_{dt}") \
@@ -14,7 +21,8 @@ def merge_data(weather_path: str, songs_path: str, audio_features_path: str, sav
         .filter("days_on_chart < 30") \
         .select("track_id", "artist_names", "track_name", "streams")
 
-    audio_features_df = spark.read.option("mergeSchema", "true").parquet(audio_features_path)
+    audio_features_df = spark.read.parquet(audio_features_path)
+    audio_features_df = cast_long_to_int(audio_features_df)
     
     merged_song_df = songs_df.join(broadcast(audio_features_df), on="track_id", how="left")
     merged_song_df = merged_song_df.withColumn("dt", lit(dt))
