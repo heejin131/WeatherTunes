@@ -4,6 +4,7 @@ import requests
 import pandas as pd
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType, StructField, LongType
 from pyspark.sql.functions import col, lit, pow, abs, avg, rand
 
 load_dotenv()
@@ -100,8 +101,14 @@ def recommend_tracks(meta_path: str, track_info_path: str, audio_features_path: 
     spark = SparkSession.builder.appName(f"recommend_tracks_{ds}") \
             .config("spark.sql.sources.partitionOverwriteMode", "dynamic") \
             .getOrCreate()
+
+    meta_schema = StructType([
+        StructField("BPM", LongType(), True),
+        StructField("danceability", LongType(), True),
+        StructField("happiness", LongType(), True)
+    ])
     
-    meta_df = spark.read.parquet(meta_path) \
+    meta_df = spark.read.schema(meta_schema).parquet(meta_path) \
         .select("BPM", "danceability", "happiness")
 
     if meta_df.rdd.isEmpty():
@@ -133,13 +140,6 @@ def recommend_tracks(meta_path: str, track_info_path: str, audio_features_path: 
     result_df = top3_df.join(songs_df, on="track_id", how="left") \
         .select("track_id", "artist_names", "track_name")
 
-    print("-----top3_df-----")
-    top3_df.show()
-    print("-----songs_df-----")
-    songs_df.show()
-    print("-----result_df-----")
-    result_df.show()
-    
     result_df.toPandas().to_json(save_path, orient="records", force_ascii=False)
     
     print(f"✅ top 3 데이터를 {save_path}로 저장 완료")
