@@ -110,8 +110,8 @@ def recommend_tracks(meta_path: str, songs_path: str, audio_features_path: str, 
 
     avg_df = meta_df.agg(
         avg("BPM").alias("BPM"),
-        avg("danceability").ailas("danceability"),
-        avg("happiness").ailas("happiness")
+        avg("danceability").alias("danceability"),
+        avg("happiness").alias("happiness")
     )
     avg_vals = avg_df.first()
     
