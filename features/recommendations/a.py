@@ -85,12 +85,9 @@ def load_weather_now(ds: str):
 def recommend_random_tracks(track_info_path: str, save_path: str):
     print("⚠️ 해당 조건의 메타데이터 없음. 랜덤 추천으로 대체합니다.")
 
-    # songs_df = spark.read.parquet(track_info_path) \
-    #     .select("track_id", "artist_names", "track_name") \
-    #     .dropDuplicates(["track_id"])
-    songs_df = spark.read.option("header", True).csv(track_info_path) \
-            .select("track_id", "artist_names", "track_name") \
-            .dropDuplicates(["track_id"])
+    songs_df = spark.read.parquet(track_info_path) \
+        .select("track_id", "artist_names", "track_name") \
+        .dropDuplicates(["track_id"])
 
     df = songs_df.orderBy(rand()).limit(3)
 
@@ -129,12 +126,9 @@ def recommend_tracks(meta_path: str, track_info_path: str, audio_features_path: 
     )
     
     top3_df = df_with_distance.orderBy(col("dinstance")).limit(3)
-    # songs_df = spark.read.parquet(track_info_path) \
-    #     .select("track_id", "artist_names", "track_name") \
-    #     .dropDuplicates(["track_id"])
-    songs_df = spark.read.option("header", True).csv(track_info_path) \
-            .select("track_id", "artist_names", "track_name") \
-            .dropDuplicates(["track_id"])
+    songs_df = spark.read.parquet(track_info_path) \
+        .select("track_id", "artist_names", "track_name") \
+        .dropDuplicates(["track_id"])
         
     result_df = top3_df.join(songs_df, on="track_id", how="left") \
         .select("track_id", "artist_names", "track_name")
