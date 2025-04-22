@@ -23,13 +23,13 @@ def display_msg(data, ds: str):
     
     return msg + "### 💬 내일도 당신의 하루에 맞는 음악을 준비할게요!"
 
-def send_noti(ds: str):
+def send_noti(ds_nodash: str):
     WEBHOOK_ID = os.getenv('DISCORD_WEBHOOK_ID')
     WEBHOOK_TOKEN = os.getenv('DISCORD_WEBHOOK_TOKEN')
     WEBHOOK_URL = f"https://discordapp.com/api/webhooks/{WEBHOOK_ID}/{WEBHOOK_TOKEN}"
     
-    gcs_path = f"gs://jacob_weathertunes/tmp/recommend_{ds}.json"
-    local_path = f"/home/joon/temp/recommend/recommend_{ds}.json"
+    gcs_path = f"gs://jacob_weathertunes/tmp/recommend_{ds_nodash}.json"
+    local_path = f"/home/joon/temp/recommend/recommend_{ds_nodash}.json"
     
     os.system(f"gsutil cp {gcs_path} {local_path}")
     with open(local_path, "r", encoding="utf-8") as f:
@@ -46,3 +46,9 @@ def send_noti(ds: str):
     else:
         print(f"에러 발생: {response.status_code}, {response.text}")
     return status_code
+
+if __name__ == "__main__":
+    ds = sys.argv[1]
+    ds_nodash = ds.replace("-", "")
+
+    send_noti(ds_nodash)
