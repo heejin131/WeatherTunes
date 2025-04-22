@@ -418,11 +418,19 @@ df_filtered = df[df["days_on_chart"] < 30].reset_index(drop=True) # 30일 이상
 
 ### raw_songs
 
-- start >> fetch_today_top200 >> end
+- start >> scrape_today_top200 >> end
 
 ### data_weather
 
 - start >> clean_weather_data >> end
+
+### data_songs
+
+- start >> clean_songs_top200 >> end
+
+### data_audio_features
+
+- start >> scrape_audio_features >> end
 
 ### meta
 
@@ -440,7 +448,9 @@ df_filtered = df[df["days_on_chart"] < 30].reset_index(drop=True) # 30일 이상
 |-----------------------------|------|
 | `0.1/develop`               | 전체 통합 개발 브랜치 |
 | `0.1/feature-data_weather`  | 기상청 날씨 데이터 수집 및 전처리 |
-| `0.1/feature-data_songs`    | Spotify Top 200 곡 수집 |
+| `0.1/feature-raw_songs`     | Spotify Top 200 곡 수집 |
+| `0.1/feature-data_songs`    | Spotify Top 200 곡 전처리|
+| `0.1/feature-data_songs`    | Tunebat 에서 audio feat수집|
 | `0.1/features-meta`         | 날씨+곡 결합 메타데이터 생성 |
 | `0.1/features-recommendation` | 추천 알고리즘 개발 및 시각화 연동 |
 
