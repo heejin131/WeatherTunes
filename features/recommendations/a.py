@@ -116,7 +116,7 @@ def recommend_tracks(meta_path: str, songs_path: str, audio_features_path: str, 
     avg_vals = avg_df.first()
     
     audio_features_df = spark.read.parquet(audio_features_path) \
-        .select("track_id", "BPM", "danceability")
+        .select("track_id", "BPM", "danceability", "happiness")
     
     df_with_distance = audio_features_df.withColumn(
         "dinstance",
