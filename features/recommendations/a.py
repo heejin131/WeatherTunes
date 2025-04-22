@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, IntegerType, StringType
+from pyspark.sql.types import StructType, StructField, LongType, StringType
 from pyspark.sql.functions import col, lit, pow, abs, avg, rand
 
 load_dotenv()
@@ -103,19 +103,19 @@ def recommend_tracks(meta_path: str, track_info_path: str, audio_features_path: 
             .getOrCreate()
 
     meta_schema = StructType([
-        StructField("BPM", IntegerType(), True),
-        StructField("danceability", IntegerType(), True),
-        StructField("happiness", IntegerType(), True)
+        StructField("BPM", LongType(), True),
+        StructField("danceability", LongType(), True),
+        StructField("happiness", LongType(), True)
     ])
     audio_features_schema = StructType([
         StructField("track_id", StringType(), True),
-        StructField("BPM", IntegerType(), True),
-        StructField("danceability", IntegerType(), True),
-        StructField("happiness", IntegerType(), True)
+        StructField("BPM", LongType(), True),
+        StructField("danceability", LongType(), True),
+        StructField("happiness", LongType(), True)
     ])
     
     meta_df = spark.read.schema(meta_schema).parquet(meta_path) \
-        .select("BPM", "danceability", "happiness")
+        .selectExpr("BPM", "Danceability as danceability", "Happiness as happiness")
 
     if meta_df.rdd.isEmpty():
         recommend_random_tracks(track_info_path, save_path)
