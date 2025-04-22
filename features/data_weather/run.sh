@@ -8,4 +8,4 @@ $SPARK_HOME/bin/spark-submit \
 --master spark://spark-jerry-1.asia-northeast3-c.c.wiki-455500.internal:7077 \
 --executor-memory 2G \
 --executor-cores 2 \
-$PY_PATH $DS_NODASH
+$PY_PATH $DS_NODASH &
