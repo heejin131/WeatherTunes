@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, LongType
+from pyspark.sql.types import StructType, StructField, LongType, StringType
 from pyspark.sql.functions import col, lit, pow, abs, avg, rand
 
 load_dotenv()
@@ -107,6 +107,12 @@ def recommend_tracks(meta_path: str, track_info_path: str, audio_features_path: 
         StructField("danceability", LongType(), True),
         StructField("happiness", LongType(), True)
     ])
+    audio_features_schema = StructType([
+        StructField("track_id", StringType(), True),
+        StructField("BPM", LongType(), True),
+        StructField("danceability", LongType(), True),
+        StructField("happiness", LongType(), True)
+    ])
     
     meta_df = spark.read.schema(meta_schema).parquet(meta_path) \
         .select("BPM", "danceability", "happiness")
@@ -122,8 +128,9 @@ def recommend_tracks(meta_path: str, track_info_path: str, audio_features_path: 
     )
     avg_vals = avg_df.first()
     
-    audio_features_df = spark.read.parquet(audio_features_path) \
-        .select("track_id", "BPM", "danceability", "happiness")
+    audio_features_df = spark.read.schema(audio_features_schema) \
+            .parquet(audio_features_path) \
+            .select("track_id", "BPM", "danceability", "happiness")
     
     df_with_distance = audio_features_df.withColumn(
         "dinstance",
