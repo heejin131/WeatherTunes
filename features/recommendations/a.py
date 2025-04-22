@@ -91,8 +91,8 @@ def recommend_random_tracks(track_info_path: str, save_path: str):
 
     df = songs_df.orderBy(rand()).limit(3)
 
-    df.select("artist_names", "track_name") \
-        .to_json(save_path, orient="records", force_ascii=False)
+    df.select("track_id", "artist_names", "track_name") \
+        .toPandas().to_json(save_path, orient="records", force_ascii=False)
 
     print(f"✅ 랜덤 추천 결과를 {save_path}에 저장 완료")
 
@@ -131,9 +131,9 @@ def recommend_tracks(meta_path: str, track_info_path: str, audio_features_path: 
         .dropDuplicates(["track_id"])
         
     result_df = top3_df.join(songs_df, on="track_id", how="left") \
-        .select("artist_names", "track_name")
+        .select("track_id", "artist_names", "track_name")
     
-    result_df.to_json(save_path, orient="records", force_ascii=False)
+    result_df.toPandas().to_json(save_path, orient="records", force_ascii=False)
     
     print(f"✅ top 3 데이터를 {save_path}로 저장 완료")
 
