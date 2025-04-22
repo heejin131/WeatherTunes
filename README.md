@@ -202,7 +202,7 @@ bucket/
 
 ### 🟢 1.2 곡 원본 (`raw/songs_raw/`)
 - 수집 위치: `gs://jacob_weathertunes/raw/songs_raw/`
-- 수집 방식: Selenium + Spotify Charts
+- 수집 방식: Playwright + Spotify Charts
 - 파티션: `dt=YYYYMMDD`
 - 컬럼: 날짜, 아티스트명, 트랙명, 랭킹, 스트리밍 수 등 (형태 변경 가능)
 - 특징: 차트 CSV 구조를 그대로 저장
