@@ -5,7 +5,7 @@ description = "Default template for PDM package"
 authors = [
     {name = "heejin131", email = "journeyjean131@gmail.com"},
 ]
-dependencies = ["jupyterlab>=4.4.0", "apache-airflow>=2.10.5", "streamlit>=1.44.1", "requests>=2.32.3", "matplotlib>=3.10.1", "fonttools>=4.57.0", "selenium>=4.31.0", "webdriver-manager>=4.0.2", "dotenv>=0.9.9", "pandas>=2.2.3", "gcsfs>=2025.3.2"]
+dependencies = ["jupyterlab>=4.4.0", "apache-airflow>=2.10.5", "streamlit>=1.44.1", "requests>=2.32.3", "matplotlib>=3.10.1", "fonttools>=4.57.0", "selenium>=4.31.0", "webdriver-manager>=4.0.2", "dotenv>=0.9.9", "pandas>=2.2.3", "gcsfs>=2025.3.2", "undetected-chromedriver>=3.5.5", "selenium-stealth>=1.0.6", "playwright>=1.51.0"]
 requires-python = "==3.12.*"
 readme = "README.md"
 license = {text = "MIT"}
