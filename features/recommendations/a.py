@@ -149,7 +149,7 @@ if __name__ == "__main__":
 
     meta_path = f"{BASE_PATH}/meta/dt=*/weather_code={weather_code}/temp_code={temp_code}/"
     # track_info_path = f"{BASE_PATH}/meta/"
-    track_info_path = f"{BASE_PATH}/raw/songs_raw/*.csv"
+    track_info_path = f"{BASE_PATH}/data/songs_top200/"
     audio_features_path = f"{BASE_PATH}/data/audio_features"
     save_path = f"{BASE_PATH}/tmp/recommend_{ds}.json"
     
