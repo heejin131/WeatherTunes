@@ -250,7 +250,7 @@ bucket/
 - 수집 위치: `gs://jacob_weathertunes/data/songs_top200/`
 - 주요 컬럼: track_id, artist_names, track_name, streams, days_on_chart
 - 기준: Spotify 기준 하루 단위 Top 200
-- 
+  
 ```
 +--------------------+--------------------+--------------------+-------------+-------+--------+
 |            track_id|        artist_names|          track_name|days_on_chart|streams|      dt|
@@ -270,7 +270,7 @@ bucket/
 
 ### 🟤 2.3 오디오 피처 (`data/audio_features/`)
 - 수집 위치: `gs://jacob_weathertunes/data/audio_features/`
-- 수집 방식: Tunebat 크롤링
+- 수집 방식: Tunebat + Selenium 크롤링
 - 주요 컬럼: track_id, BPM, Danceability, Happiness
 ```
 +--------------------+---+------------+---------+
