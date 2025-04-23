@@ -1,5 +1,6 @@
 from airflow import DAG
 from airflow.operators.bash import BashOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.utils.dates import days_ago
 from datetime import datetime, timedelta
 import os
@@ -19,8 +20,7 @@ with DAG(
     start_date=datetime(2023, 1, 1),
     end_date=datetime(2025, 4, 2),
     catchup=True,
-    max_active_runs=7,
-    concurrency=10,
+    max_active_runs=1,
     tags=['weathertunes', 'weather', 'data'],
 ) as dag:
 
@@ -30,8 +30,7 @@ with DAG(
     clean_weather_data = BashOperator(
         task_id="process_songs_data",
         bash_command="""
-             ssh -i ~/.ssh/WMINHYUK_KEY SEOMINHYUK@34.64.239.242 \
-            "/home/SEOMINHYUK/code/airflow/dags/WeatherTunes/features/data_weather/run.sh {{ ds }} /home/SEOMINHYUK/code/airflow/dags/WeatherTunes/features/data_weather/a.py"
+            bash -x /home/SEOMINHYUK/code/WeatherTunes/features/data_weather/run.sh {{ ds_nodash }} /home/SEOMINHYUK/code/WeatherTunes/features/data_weather/a.py
         """
-    )
+        )
     start >> clean_weather_data >> end
