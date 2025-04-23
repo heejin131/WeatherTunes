@@ -1,13 +1,17 @@
-import os, sys, time, random, re, traceback
+import os
 import pandas as pd
 import gcsfs
-from datetime import datetime
+import re
+import sys, traceback
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium_stealth import stealth
 import undetected_chromedriver as uc
-import signal
+import time, random
+import multiprocessing as mp
+from datetime import datetime
+import psutil
 
 def to_int_safe(value):
     try:
@@ -15,14 +19,16 @@ def to_int_safe(value):
     except:
         return None
 
-class TimeoutException(Exception): pass
+def kill_child_processes(pid):
+    try:
+        parent = psutil.Process(pid)
+        for child in parent.children(recursive=True):
+            child.kill()
+    except Exception as e:
+        print(f"❌ 하위 프로세스 종료 실패: {e}")
 
-def timeout_handler(signum, frame):
-    raise TimeoutException()
-
-signal.signal(signal.SIGALRM, timeout_handler)
-
-def create_driver():
+def scrape_track_data(track_id):
+    url = f"https://tunebat.com/Info/track/{track_id}"
     options = uc.ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
@@ -36,18 +42,23 @@ def create_driver():
     options.add_argument("--disable-sync")
     options.add_argument("user-agent=Mozilla/5.0 ...")
     options.binary_location = "/usr/bin/google-chrome"
-    driver = uc.Chrome(options=options, use_subprocess=False)
-    stealth(driver, languages=["en-US", "en"], vendor="Google Inc.",
-            platform="Win32", webgl_vendor="Intel Inc.",
-            renderer="Intel Iris OpenGL Engine", fix_hairline=True)
-    return driver
 
-def scrape_track_data(driver, track_id):
-    url = f"https://tunebat.com/Info/track/{track_id}"
+    driver = None
     try:
+        driver = uc.Chrome(options=options, use_subprocess=False)
+
+        stealth(driver,
+            languages=["en-US", "en"],
+            vendor="Google Inc.",
+            platform="Win32",
+            webgl_vendor="Intel Inc.",
+            renderer="Intel Iris OpenGL Engine",
+            fix_hairline=True,
+        )
+
         driver.get(url)
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-        time.sleep(random.uniform(2.5, 5.5))
+        time.sleep(random.uniform(3.0, 6.0))
 
         def get_metric(label):
             try:
@@ -65,11 +76,11 @@ def scrape_track_data(driver, track_id):
                     return value_el.get_attribute("title")
             except:
                 return "N/A"
-        
+
         bpm = to_int_safe(get_metric("BPM"))
         danceability = to_int_safe(get_metric("Danceability"))
         happiness = to_int_safe(get_metric("Happiness"))
-        
+
         if bpm is not None and danceability is not None and happiness is not None:
             return {
                 "track_id": track_id,
@@ -77,31 +88,46 @@ def scrape_track_data(driver, track_id):
                 "Danceability": danceability,
                 "Happiness": happiness
             }
-    except Exception as e:
-        print(f"❌ {track_id} 크롤링 중 오류 발생: {e}")
-    return None
 
-def scrape_with_timeout(driver, track_id, timeout=30):
-    import signal
-    class TimeoutException(Exception): pass
-    def timeout_handler(signum, frame):
-        raise TimeoutException()
-
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(timeout)
-    try:
-        return scrape_track_data(driver, track_id)
-    except TimeoutException:
-        print(f"⏰ {track_id} 타임아웃 발생")
-        return None
     except Exception as e:
-        print(f"⚠️ {track_id} 일반 오류: {e}")
-        if "Connection refused" in str(e) or "Max retries exceeded" in str(e):
-            raise RuntimeError("Driver connection broken")
+        print(f"🚫 driver.get() 중단: {e}")
         return None
+
     finally:
-        signal.alarm(0)
+        try:
+            if driver:
+                driver.quit()
+                driver.service.stop()
+        except:
+            pass
+        kill_child_processes(os.getpid())
+        time.sleep(random.uniform(3, 5))
 
+def worker(track_id, return_dict):
+    try:
+        result = scrape_track_data(track_id)
+        return_dict["result"] = result
+    except Exception as e:
+        return_dict["error"] = str(e)
+
+def run_with_timeout(track_id, timeout=30):
+    manager = mp.Manager()
+    return_dict = manager.dict()
+    p = mp.Process(target=worker, args=(track_id, return_dict))
+    p.start()
+    p.join(timeout)
+
+    if p.is_alive():
+        print(f"❌ {track_id} 타임아웃 → 프로세스 종료")
+        kill_child_processes(p.pid)
+        p.terminate()
+        p.join()
+        return None
+    if "result" in return_dict:
+        return return_dict["result"]
+    else:
+        print(f"❌ {track_id} 오류 발생: {return_dict.get('error')}")
+        return None
 
 def get_latest_partition(bucket_path):
     fs = gcsfs.GCSFileSystem()
@@ -120,8 +146,10 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 2:
         target_date = sys.argv[1]
+        print(f"📦 입력 날짜 인자: {target_date}")
     else:
         target_date = get_latest_partition(input_base)
+        print(f"📅 최신 날짜 자동 선택: {target_date}")
 
     if not target_date:
         print("❌ 유효한 날짜를 찾을 수 없습니다.")
@@ -142,40 +170,47 @@ if __name__ == "__main__":
         print("⚠️ track_id가 없습니다.")
         sys.exit(0)
 
+    print(f"🚀 총 {len(track_ids)}개 트랙 수집 시작")
+
     fs = gcsfs.GCSFileSystem()
     failures = []
-    driver = create_driver()
 
     for i, tid in enumerate(track_ids):
-        out_path = f"{output_path}{tid}.parquet"
+        try:
+            out_path = f"{output_path}{tid}.parquet"
 
-        if fs.exists(out_path):
-            print(f"⏭️ {tid} 이미 저장됨, 건너뜀")
-            continue
+            if fs.exists(out_path):
+                print(f"⏭️ {tid} 이미 저장됨, 건너뜀")
+                continue
 
-        print(f"[{i+1}/{len(track_ids)}] 🎵 {tid} 크롤링 중...")
+            print(f"[{i+1}/{len(track_ids)}] 🎵 {tid} 크롤링 중...")
 
-        result = scrape_with_timeout(driver, tid)
+            result = run_with_timeout(tid, timeout=30)
+            if result is None:
+                failures.append((tid, target_date))
+                continue
 
-        if result is None:
+            df_result = pd.DataFrame([result])
+            df_result.to_parquet(out_path, index=False)
+
+            print(f"✅ 저장 완료: {out_path}")
+
+        except Exception as e:
+            print(f"❌ {tid} 처리 중 예외 발생: {e}")
+            traceback.print_exc()
             failures.append((tid, target_date))
             continue
-
-        pd.DataFrame([result]).to_parquet(out_path, index=False)
-        print(f"✅ 저장 완료: {out_path}")
-
-        # 💡 일정 개수마다 driver 재시작
-        if (i + 1) % 20 == 0:
-            driver.quit()
-            time.sleep(5)
-            driver = create_driver()
-
-    driver.quit()
 
     print(f"\n🎉 모든 작업 완료! 저장 경로: {output_path}")
 
     if failures:
-        pd.DataFrame(failures, columns=["track_id", "date"]).to_csv("failures.csv", index=False, mode="a", header=not os.path.exists("failures.csv"))
+        print("\n📋 실패한 track_id 목록:")
+        for tid, _ in failures:
+            print("-", tid)
+
+        mode = "a" if os.path.exists("failures.csv") else "w"
+        header = not os.path.exists("failures.csv")
+        pd.DataFrame(failures, columns=["track_id", "date"]).to_csv("failures.csv", index=False, mode=mode, header=header)
         print("📝 실패 목록을 failures.csv 로 저장했습니다.")
     else:
         print("✅ 모든 track_id 성공적으로 처리되었습니다.")

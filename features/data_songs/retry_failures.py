@@ -1,31 +1,34 @@
-import pandas as pd
 import os
-import time
+import pandas as pd
 import gcsfs
-from a import create_driver, scrape_with_timeout
+import traceback
+import sys
+from a import run_with_timeout
 
 INPUT_PATH = "failures.csv"
 OUTPUT_PATH = "gs://jacob_weathertunes/data/audio_features/"
 
-# 파일 존재 확인
-if not os.path.exists(INPUT_PATH):
-    print("❌ failures.csv 파일이 없습니다.")
-    exit(1)
+# 날짜 기본값 처리
+try:
+    df_raw = pd.read_csv(INPUT_PATH)
+    if "date" not in df_raw.columns:
+        df_raw["date"] = pd.Timestamp.today().strftime("%Y%m%d")
+    df_fail = df_raw[["track_id", "date"]]
+except Exception as e:
+    print(f"❌ 실패 목록 로드 실패: {e}")
+    sys.exit(1)
 
-# 🔧 track_id만 추출
-df_fail = pd.read_csv(INPUT_PATH, usecols=["track_id"])
 track_ids = df_fail["track_id"].dropna().unique().tolist()
+target_date = df_fail["date"].iloc[0]
 
 if not track_ids:
-    print("⚠️ 처리할 실패 항목이 없습니다.")
-    exit(0)
+    print("⚠️ 재시도할 track_id가 없습니다.")
+    sys.exit(0)
 
 print(f"🔁 재시도할 트랙 수: {len(track_ids)}")
 
 fs = gcsfs.GCSFileSystem()
 still_failed = []
-
-driver = create_driver()
 
 for i, tid in enumerate(track_ids):
     out_path = f"{OUTPUT_PATH}{tid}.parquet"
@@ -37,38 +40,28 @@ for i, tid in enumerate(track_ids):
     print(f"[{i+1}/{len(track_ids)}] 🔁 재시도 중: {tid}")
 
     try:
-        result = scrape_with_timeout(driver, tid)
-    except RuntimeError:
-        print("♻️ 드라이버 커넥션 오류 → 재생성 후 재시도 중...")
-        driver.quit()
-        time.sleep(3)
-        driver = create_driver()
-        try:
-            result = scrape_with_timeout(driver, tid)
-        except Exception as e:
-            print(f"❌ {tid} 재시도 실패: {e}")
-            result = None
+        result = run_with_timeout(tid, timeout=30)
+        if result is None:
+            still_failed.append((tid, target_date))
+            continue
 
-    if result is None:
-        still_failed.append(tid)
+        df_result = pd.DataFrame([result])
+        df_result.to_parquet(out_path, index=False)
+        print(f"✅ 저장 완료: {out_path}")
+
+    except Exception as e:
+        print(f"❌ {tid} 처리 중 예외 발생: {e}")
+        traceback.print_exc()
+        still_failed.append((tid, target_date))
         continue
 
-    df_result = pd.DataFrame([result])
-    df_result.to_parquet(out_path, index=False)
-    print(f"✅ 저장 완료: {out_path}")
-
-    if (i + 1) % 20 == 0:
-        driver.quit()
-        time.sleep(5)
-        driver = create_driver()
-
-driver.quit()
-
-# 최종 실패 저장
+# 실패한 항목 다시 저장
 if still_failed:
-    pd.DataFrame(still_failed, columns=["track_id"]).to_csv("failures.csv", index=False)
-    print("❗ 여전히 실패한 항목이 존재합니다. failures.csv 갱신됨")
+    pd.DataFrame(still_failed, columns=["track_id", "date"]).to_csv(
+        INPUT_PATH, index=False
+    )
+    print("📋 여전히 실패한 항목이 있어 failures.csv 갱신됨")
 else:
-    if os.path.exists("failures.csv"):
-        os.remove("failures.csv")
+    if os.path.exists(INPUT_PATH):
+        os.remove(INPUT_PATH)
     print("✅ 모든 재시도 성공! failures.csv 삭제됨")
