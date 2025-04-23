@@ -163,12 +163,15 @@ bucket/
 │       └── partition: 없음 (track_id 단위 저장)
 │       └── 파일명 형식: <track_id>.parquet                (예: 7yZD4AVfQtAZD4cG8eRnPk.parquet)
 │
-└── meta/                        ← 🧠 날짜, 날씨, 기온별 곡에 대한 정보 (노이즈 제거 완료)
-    └── meta_profile/
-        └── partition: dt=YYYYMMDD
-        └── subpartition: weather_code=N/temp_code=M
-        └── 파일명 형식: part-*.parquet                    (예: weather_code=0/temp_code=1/part-00000-80ead385-8190-4afe-8765-a3b0e975330a.c000.snappy.parquet))
-
+├─── meta/                        ← 🧠 날짜, 날씨, 기온별 곡에 대한 정보 (노이즈 제거 완료)
+│   └── meta_profile/
+│       └── partition: dt=YYYYMMDD
+│       └── subpartition: weather_code=N/temp_code=M
+│       └── 파일명 형식: part-*.parquet                    (예: weather_code=0/temp_code=1/part-00000-80ead385-8190-4afe-8765-a3b0e975330a.c000.snappy.parquet))
+│
+└── tmp/                         ← 추천 곡 정보
+    └── recommend/
+        └── 파일명 형식: json (예: recommend_20230101.json)
 ```
 
 <br>
